@@ -1,0 +1,105 @@
+{
+  "teams": [
+    {
+      "id": "team-001-claro-tech",
+      "name": "Claro Tech",
+      "colorHex": "#00B37E",
+      "description": "Equipe responsável pela arquitetura e inovação do app Minha Claro."
+    },
+    {
+      "id": "team-002-mobile-dev",
+      "name": "Mobile Squad",
+      "colorHex": "#EBCB4B",
+      "description": "Desenvolvimento das interfaces e experiência React Native."
+    },
+    {
+      "id": "team-003-backend-core",
+      "name": "Backend Core",
+      "colorHex": "#00B4D8",
+      "description": "APIs de alta performance, microsserviços e persistência com MySQL."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Configurar ambiente do Monorepo",
+      "description": "Definir estrutura do repositório contendo API NestJS e App React Native com TypeScript.",
+      "status": "COMPLETED",
+      "dueDate": "2026-10-12T18:00:00.000Z",
+      "teamIds": ["team-001-claro-tech", "team-003-backend-core"]
+    },
+    {
+      "id": "task-002",
+      "title": "Modelar banco de dados MySQL com Prisma",
+      "description": "Criar models de Teams, Tasks e relação N:N TaskTeam com cascade e migrations.",
+      "status": "COMPLETED",
+      "dueDate": "2026-10-13T12:00:00.000Z",
+      "teamIds": ["team-003-backend-core"]
+    },
+    {
+      "id": "task-003",
+      "title": "Implementar CRUD e paginação de Times",
+      "description": "Disponibilizar endpoints REST com suporte a busca textual por nome e paginação.",
+      "status": "COMPLETED",
+      "dueDate": "2026-10-14T10:00:00.000Z",
+      "teamIds": ["team-001-claro-tech", "team-003-backend-core"]
+    },
+    {
+      "id": "task-004",
+      "title": "Criar endpoints de Tarefas com filtros",
+      "description": "Suportar filtros por teamId, status, busca por texto, ordenação e paginação.",
+      "status": "IN_PROGRESS",
+      "dueDate": "2026-10-15T15:00:00.000Z",
+      "teamIds": ["team-003-backend-core"]
+    },
+    {
+      "id": "task-005",
+      "title": "Configurar NativeWind e Design System Dark",
+      "description": "Aplicar tokens do Figma: paleta dark #121214, acentos #00B37E e tipografia.",
+      "status": "IN_PROGRESS",
+      "dueDate": "2026-10-16T17:00:00.000Z",
+      "teamIds": ["team-002-mobile-dev"]
+    },
+    {
+      "id": "task-006",
+      "title": "Desenvolver seletor de cores customizado",
+      "description": "Criar componente de input com visualizador da cor hexadecimal e modal seletor.",
+      "status": "IN_PROGRESS",
+      "dueDate": "2026-10-17T11:00:00.000Z",
+      "teamIds": ["team-001-claro-tech", "team-002-mobile-dev"]
+    },
+    {
+      "id": "task-007",
+      "title": "Componente Multi-Dropdown para seleção de times",
+      "description": "Permitir associar uma tarefa a zero ou mais times simultaneamente com feedback visual.",
+      "status": "PENDING",
+      "dueDate": "2026-10-18T16:00:00.000Z",
+      "teamIds": ["team-002-mobile-dev"]
+    },
+    {
+      "id": "task-008",
+      "title": "Optimistic Updates com React Query",
+      "description": "Implementar feedback instantâneo na troca de status e remoção de tarefas/times.",
+      "status": "PENDING",
+      "dueDate": "2026-10-19T14:00:00.000Z",
+      "teamIds": ["team-002-mobile-dev"]
+    },
+    {
+      "id": "task-009",
+      "title": "Escrever testes unitários e de integração",
+      "description": "Cobrir services/controllers do NestJS e testes de componentes no React Native com Jest.",
+      "status": "PENDING",
+      "dueDate": "2026-10-20T18:00:00.000Z",
+      "teamIds": ["team-001-claro-tech"]
+    },
+    {
+      "id": "task-010",
+      "title": "Revisão e elaboração do README técnico",
+      "description": "Documentar decisões arquiteturais, modelo de dados, exemplos cURL e plano de produção.",
+      "status": "PENDING",
+      "dueDate": "2026-10-21T12:00:00.000Z",
+      "teamIds": []
+    }
+  ]
+}
+

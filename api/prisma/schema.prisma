@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Team {
+  id          String     @id @default(uuid())
+  name        String
+  colorHex    String
+  description String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tasks       TaskTeam[]
+
+  @@map("teams")
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?    @db.Text
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  teams       TaskTeam[]
+
+  @@map("tasks")
+}
+
+model TaskTeam {
+  taskId String
+  teamId String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, teamId])
+  @@index([teamId])
+  @@index([taskId])
+  @@map("task_teams")
+}
+
