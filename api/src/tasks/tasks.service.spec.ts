@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { TasksRepository } from './tasks.repository';
 import { TaskStatus } from '@prisma/client';
@@ -29,23 +28,15 @@ describe('TasksService', () => {
   };
 
   beforeEach(async () => {
-    const mockRepo = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
+    const mockRepo = Object.create(TasksRepository.prototype) as TasksRepository;
+    vi.spyOn(mockRepo, 'create').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'findAll').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'findById').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'update').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'delete').mockImplementation(vi.fn());
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TasksService,
-        { provide: TasksRepository, useValue: mockRepo },
-      ],
-    }).compile();
-
-    service = module.get<TasksService>(TasksService);
-    repository = module.get(TasksRepository);
+    repository = mockRepo;
+    service = new TasksService(mockRepo);
   });
 
   it('should be defined', () => {
@@ -66,6 +57,18 @@ describe('TasksService', () => {
       expect(result.teams).toEqual([
         { id: 'team-1', name: 'Claro Tech', colorHex: '#00B37E' },
       ]);
+    });
+
+    it('creates a task without teams or an optional due date', async () => {
+      repository.create.mockResolvedValue({ ...mockTaskWithTeams, teams: [] });
+      await service.create({ title: 'Tarefa simples', description: 'Detalhes' });
+      expect(repository.create).toHaveBeenCalledWith({
+        title: 'Tarefa simples',
+        description: 'Detalhes',
+        status: undefined,
+        dueDate: null,
+        teamIds: [],
+      });
     });
   });
 
@@ -98,6 +101,45 @@ describe('TasksService', () => {
         }),
       );
     });
+
+    it('applies trimmed search, sorting, and requested pagination', async () => {
+      repository.findAll.mockResolvedValue([[mockTaskWithTeams], 3]);
+      const result = await service.findAll({
+        search: '  Hitss  ',
+        sort: 'title:asc',
+        limit: 1,
+        offset: 1,
+      });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { title: { contains: 'Hitss' } },
+              { description: { contains: 'Hitss' } },
+            ],
+          },
+          skip: 1,
+          take: 1,
+          orderBy: { title: 'asc' },
+        }),
+      );
+      expect(result.meta).toEqual({ total: 3, limit: 1, offset: 1, hasMore: true });
+    });
+
+    it('uses defaults for unsupported sort options and returns empty pages', async () => {
+      repository.findAll.mockResolvedValue([[], 0]);
+      const result = await service.findAll({ sort: 'invalid:asc' });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 10, orderBy: { createdAt: 'desc' } }),
+      );
+      expect(result.data).toEqual([]);
+      expect(result.meta.hasMore).toBe(false);
+    });
+
+    it('propagates repository errors', async () => {
+      repository.findAll.mockRejectedValue(new Error('database unavailable'));
+      await expect(service.findAll({})).rejects.toThrow('database unavailable');
+    });
   });
 
   describe('updateStatus', () => {
@@ -123,6 +165,61 @@ describe('TasksService', () => {
       await expect(service.findOne('invalid-task')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('update and remove', () => {
+    it('updates all editable task fields and formats teams', async () => {
+      repository.findById.mockResolvedValue(mockTaskWithTeams);
+      repository.update.mockResolvedValue({
+        ...mockTaskWithTeams,
+        title: 'Atualizada',
+        status: TaskStatus.COMPLETED,
+      });
+      const result = await service.update('task-1', {
+        title: 'Atualizada',
+        description: 'Descrição atualizada',
+        status: TaskStatus.COMPLETED,
+        dueDate: '2026-10-13T00:00:00.000Z',
+        teamIds: ['team-1'],
+      });
+      expect(repository.update).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          title: 'Atualizada',
+          description: 'Descrição atualizada',
+          status: TaskStatus.COMPLETED,
+          teamIds: ['team-1'],
+          dueDate: new Date('2026-10-13T00:00:00.000Z'),
+        }),
+      );
+      expect(result.title).toBe('Atualizada');
+    });
+
+    it('does not update or delete a task that does not exist', async () => {
+      repository.findById.mockResolvedValue(null);
+      await expect(
+        service.update('missing', {
+          title: 'Missing',
+          description: 'Descrição obrigatória',
+        }),
+      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      expect(repository.update).not.toHaveBeenCalled();
+      expect(repository.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes an existing task and propagates repository errors', async () => {
+      repository.findById.mockResolvedValue(mockTaskWithTeams);
+      repository.delete.mockResolvedValue(mockTaskWithTeams);
+      await expect(service.remove('task-1')).resolves.toEqual(mockTaskWithTeams);
+      repository.update.mockRejectedValue(new Error('write failed'));
+      await expect(
+        service.update('task-1', {
+          title: 'Tarefa alterada',
+          description: 'Descrição atualizada',
+        }),
+      ).rejects.toThrow('write failed');
     });
   });
 });

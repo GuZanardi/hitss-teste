@@ -11,18 +11,21 @@ import { X, Check } from 'lucide-react-native';
 import { ColorInputProps } from './types';
 
 const PRESET_COLORS = [
-  '#00B37E', // Verde Claro Tech
-  '#EBCB4B', // Amarelo Dourado
-  '#00B4D8', // Ciano Claro
-  '#996DFF', // Roxo Violeta
-  '#F75A68', // Vermelho Coral
-  '#FF9000', // Laranja Solar
-  '#38BDF8', // Sky Blue
-  '#A855F7', // Magenta
-  '#10B981', // Esmeralda
-  '#6366F1', // Indigo
-  '#EC4899', // Rosa
-  '#14B8A6', // Teal
+  '#00B37E',
+  '#F59E0B',
+  '#0284C7',
+  '#7C3AED',
+  '#E11D48',
+  '#EA580C',
+  '#4F46E5',
+  '#16A34A',
+  '#DB2777',
+  '#0891B2',
+  '#A16207',
+  '#9333EA',
+  '#65A30D',
+  '#C026D3',
+  '#475569',
 ];
 
 export const ColorInput: React.FC<ColorInputProps> = ({
@@ -72,6 +75,8 @@ export const ColorInput: React.FC<ColorInputProps> = ({
                 const isSelected = selectedColor.toUpperCase() === color.toUpperCase();
                 return (
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`Selecionar cor ${color}`}
                     key={color}
                     activeOpacity={0.7}
                     onPress={() => {
@@ -186,4 +191,3 @@ const styles = StyleSheet.create({
 });
 
 export * from './types';
-

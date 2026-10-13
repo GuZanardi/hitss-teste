@@ -27,5 +27,24 @@ describe('Button Component', () => {
     fireEvent.press(getByText('Desabilitado'));
     expect(onPressMock).not.toHaveBeenCalled();
   });
-});
 
+  it('shows a loader and disables presses while loading', () => {
+    const onPressMock = jest.fn();
+    const { getByRole } = render(
+      <Button title="Salvando" loading onPress={onPressMock} />,
+    );
+    fireEvent.press(getByRole('button'));
+    expect(onPressMock).not.toHaveBeenCalled();
+  });
+
+  it('supports secondary and danger variants', () => {
+    const { getByText } = render(
+      <>
+        <Button title="Voltar" variant="secondary" />
+        <Button title="Excluir" variant="danger" />
+      </>,
+    );
+    expect(getByText('Voltar')).toBeTruthy();
+    expect(getByText('Excluir')).toBeTruthy();
+  });
+});

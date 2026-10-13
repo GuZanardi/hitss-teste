@@ -31,6 +31,13 @@ const STATUS_FILTERS: Array<{ label: string; value?: TaskStatus }> = [
   { label: 'Concluída', value: 'COMPLETED' },
 ];
 
+const SORT_OPTIONS = [
+  { label: 'Mais recentes', value: 'createdAt:desc' },
+  { label: 'Mais antigas', value: 'createdAt:asc' },
+  { label: 'Título A-Z', value: 'title:asc' },
+  { label: 'Título Z-A', value: 'title:desc' },
+];
+
 export const TasksListScreen: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'TasksList'>>();
@@ -38,12 +45,11 @@ export const TasksListScreen: React.FC = () => {
   const [search, setSearch] = useState('');
   const [teamId, setTeamId] = useState(route.params?.initialTeamId ?? '');
   const [status, setStatus] = useState<TaskStatus | undefined>();
-  const [offset, setOffset] = useState(0);
+  const [sort, setSort] = useState('createdAt:desc');
 
   useEffect(() => {
     if (route.params?.initialTeamId) {
       setTeamId(route.params.initialTeamId);
-      setOffset(0);
     }
   }, [route.params?.initialTeamId]);
 
@@ -52,13 +58,15 @@ export const TasksListScreen: React.FC = () => {
     status,
     search: search.trim() || undefined,
     limit: PAGE_SIZE,
-    offset,
-    sort: 'createdAt:desc',
+    sort,
   };
   const {
     data: tasksResponse,
     isLoading,
     isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     isError,
     error,
     refetch,
@@ -73,8 +81,8 @@ export const TasksListScreen: React.FC = () => {
   });
   const statusMutation = useUpdateTaskStatus();
 
-  const tasks = tasksResponse?.data ?? [];
-  const meta = tasksResponse?.meta;
+  const tasks = tasksResponse?.pages.flatMap((page) => page.data) ?? [];
+  const meta = tasksResponse?.pages[0]?.meta;
   const teams: DropdownItem[] = [
     { label: 'Todos os times', value: '' },
     ...(teamsResponse?.data ?? []).map((team) => ({
@@ -86,7 +94,6 @@ export const TasksListScreen: React.FC = () => {
 
   const changeFilter = (change: () => void) => {
     change();
-    setOffset(0);
   };
 
   const nextStatus = (current: TaskStatus): TaskStatus => {
@@ -120,13 +127,25 @@ export const TasksListScreen: React.FC = () => {
         <Search color="#00B37E" size={20} style={styles.searchIcon} />
       </View>
 
-      <Dropdown
-        label="Time"
-        items={teams}
-        value={teamId}
-        placeholder="Todos os times"
-        onSelect={(value) => changeFilter(() => setTeamId(value))}
-      />
+      <View style={styles.listFilters}>
+        <View style={styles.filterDropdown}>
+          <Dropdown
+            label="Time"
+            items={teams}
+            value={teamId}
+            placeholder="Todos os times"
+            onSelect={(value) => changeFilter(() => setTeamId(value))}
+          />
+        </View>
+        <View style={styles.filterDropdown}>
+          <Dropdown
+            label="Ordenar"
+            items={SORT_OPTIONS}
+            value={sort}
+            onSelect={(value) => changeFilter(() => setSort(value))}
+          />
+        </View>
+      </View>
       {teamsError ? (
         <TouchableOpacity
           accessibilityRole="button"
@@ -186,14 +205,15 @@ export const TasksListScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           refreshControl={
             <RefreshControl
-              refreshing={isFetching && !isLoading}
-              onRefresh={() => {
-                setOffset(0);
-                void refetch();
-              }}
+              refreshing={isFetching && !isLoading && !isFetchingNextPage}
+              onRefresh={() => void refetch()}
               tintColor="#00B37E"
             />
           }
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+          }}
+          onEndReachedThreshold={0.5}
           renderItem={({ item }) => (
             <TaskCard
               task={item}
@@ -227,37 +247,12 @@ export const TasksListScreen: React.FC = () => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={
-            meta && meta.total > PAGE_SIZE ? (
-              <View style={styles.paginationRow}>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  disabled={offset === 0 || isFetching}
-                  onPress={() => setOffset((previous) => Math.max(0, previous - PAGE_SIZE))}
-                  style={[
-                    styles.paginationButton,
-                    offset === 0 ? styles.paginationDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.paginationText}>Anterior</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.paginationInfo}>
-                  {meta.total === 0 ? 0 : offset + 1} -{' '}
-                  {Math.min(offset + PAGE_SIZE, meta.total)} de {meta.total}
-                </Text>
-
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  disabled={!meta.hasMore || isFetching}
-                  onPress={() => setOffset((previous) => previous + PAGE_SIZE)}
-                  style={[
-                    styles.paginationButton,
-                    !meta.hasMore ? styles.paginationDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.paginationText}>Próxima</Text>
-                </TouchableOpacity>
-              </View>
+            isFetchingNextPage ? (
+              <ActivityIndicator color="#00B37E" style={styles.footerLoader} />
+            ) : hasNextPage ? (
+              <Text style={styles.moreItemsText}>
+                {meta ? `Mais tarefas disponíveis (${meta.total})` : ''}
+              </Text>
             ) : null
           }
         />
@@ -287,6 +282,14 @@ const styles = StyleSheet.create({
   searchContainer: {
     position: 'relative',
     marginBottom: 8,
+  },
+  listFilters: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  filterDropdown: {
+    flex: 1,
+    minWidth: 0,
   },
   searchInput: {
     backgroundColor: '#202024',
@@ -366,32 +369,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  paginationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  footerLoader: {
     paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#29292E',
-    marginTop: 8,
   },
-  paginationButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#202024',
-    borderRadius: 6,
-  },
-  paginationDisabled: {
-    opacity: 0.4,
-  },
-  paginationText: {
-    color: '#00B37E',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  paginationInfo: {
+  moreItemsText: {
     color: '#8D8D99',
     fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
   footer: {
     paddingVertical: 16,

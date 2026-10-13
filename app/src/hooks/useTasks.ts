@@ -1,7 +1,8 @@
 import {
-  keepPreviousData,
-  useQuery,
+  InfiniteData,
+  useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { tasksService } from '../services/tasks.service';
@@ -17,10 +18,15 @@ export function useTasks(params?: {
   offset?: number;
   sort?: string;
 }) {
-  return useQuery({
-    queryKey: [...TASKS_QUERY_KEY, params],
-    queryFn: () => tasksService.getTasks(params),
-    placeholderData: keepPreviousData,
+  return useInfiniteQuery({
+    queryKey: [...TASKS_QUERY_KEY, 'infinite', { ...params, offset: undefined }],
+    initialPageParam: params?.offset ?? 0,
+    queryFn: ({ pageParam }) =>
+      tasksService.getTasks({ ...params, offset: pageParam }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta?.hasMore
+        ? lastPage.meta.offset + lastPage.meta.limit
+        : undefined,
   });
 }
 
@@ -54,21 +60,29 @@ export function useUpdateTaskStatus() {
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: ['task', id] });
 
-      const previousTasksData = queryClient.getQueriesData<ApiResponse<Task[]>>({
-        queryKey: TASKS_QUERY_KEY,
+      const previousTasksData = queryClient.getQueriesData<
+        InfiniteData<ApiResponse<Task[]>>
+      >({
+        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
       });
-      const previousSingleTask = queryClient.getQueryData<ApiResponse<Task>>(['task', id]);
+      const previousSingleTask = queryClient.getQueryData<ApiResponse<Task>>([
+        'task',
+        id,
+      ]);
 
       // Atualiza de forma otimista nas listagens
-      queryClient.setQueriesData<ApiResponse<Task[]>>(
-        { queryKey: TASKS_QUERY_KEY },
+      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
+        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            data: old.data.map((task) =>
-              task.id === id ? { ...task, status } : task,
-            ),
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((task) =>
+                task.id === id ? { ...task, status } : task,
+              ),
+            })),
           };
         },
       );
@@ -112,7 +126,7 @@ export function useUpdateTask() {
       id: string;
       data: {
         title?: string;
-        description?: string;
+        description: string;
         status?: TaskStatus;
         dueDate?: string;
         teamIds?: string[];
@@ -120,22 +134,25 @@ export function useUpdateTask() {
     }) => tasksService.updateTask(id, data),
     // Optimistic update na edição quando o status é modificado
     onMutate: async ({ id, data }) => {
-      if (!data.status) return null;
-
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      const previousTasksData = queryClient.getQueriesData<ApiResponse<Task[]>>({
-        queryKey: TASKS_QUERY_KEY,
+      const previousTasksData = queryClient.getQueriesData<
+        InfiniteData<ApiResponse<Task[]>>
+      >({
+        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
       });
 
-      queryClient.setQueriesData<ApiResponse<Task[]>>(
-        { queryKey: TASKS_QUERY_KEY },
+      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
+        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            data: old.data.map((task) =>
-              task.id === id ? { ...task, status: data.status! } : task,
-            ),
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((task) =>
+                task.id === id ? { ...task, ...data } : task,
+              ),
+            })),
           };
         },
       );
@@ -164,20 +181,25 @@ export function useDeleteTask() {
     // Optimistic update na exclusão de tarefas
     onMutate: async (deletedId: string) => {
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      const previousTasksData = queryClient.getQueriesData<ApiResponse<Task[]>>({
-        queryKey: TASKS_QUERY_KEY,
+      const previousTasksData = queryClient.getQueriesData<
+        InfiniteData<ApiResponse<Task[]>>
+      >({
+        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
       });
 
-      queryClient.setQueriesData<ApiResponse<Task[]>>(
-        { queryKey: TASKS_QUERY_KEY },
+      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
+        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            data: old.data.filter((task) => task.id !== deletedId),
-            meta: old.meta
-              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
-              : undefined,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.filter((task) => task.id !== deletedId),
+              meta: page.meta
+                ? { ...page.meta, total: Math.max(0, page.meta.total - 1) }
+                : undefined,
+            })),
           };
         },
       );

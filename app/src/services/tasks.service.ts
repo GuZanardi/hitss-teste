@@ -21,7 +21,7 @@ export const tasksService = {
 
   async createTask(data: {
     title: string;
-    description?: string;
+    description: string;
     status?: TaskStatus;
     dueDate?: string;
     teamIds?: string[];
@@ -34,7 +34,7 @@ export const tasksService = {
     id: string,
     data: {
       title?: string;
-      description?: string;
+      description: string;
       status?: TaskStatus;
       dueDate?: string;
       teamIds?: string[];
@@ -53,4 +53,3 @@ export const tasksService = {
     await api.delete(`/tasks/${id}`);
   },
 };
-

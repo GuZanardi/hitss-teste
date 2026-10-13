@@ -82,7 +82,7 @@ export const CreateTaskScreen: React.FC = () => {
   const onSubmit = (formData: CreateTaskFormData) => {
     createMutation.mutate({
       title: formData.title.trim(),
-      description: formData.description?.trim() || undefined,
+      description: formData.description.trim(),
       status: formData.status,
       teamIds: formData.teamIds,
     });
@@ -135,6 +135,7 @@ export const CreateTaskScreen: React.FC = () => {
                 onBlur={onBlur}
                 multiline
                 numberOfLines={4}
+                error={errors.description?.message}
               />
             )}
           />

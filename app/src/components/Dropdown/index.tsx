@@ -26,6 +26,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
       <TouchableOpacity
+        accessibilityRole="button"
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
         style={[styles.selector, error ? styles.selectorError : null]}
@@ -76,6 +77,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 const isSelected = item.value === value;
                 return (
                   <TouchableOpacity
+                    accessibilityRole="button"
                     activeOpacity={0.7}
                     onPress={() => {
                       onSelect(item.value);
@@ -218,4 +220,3 @@ const styles = StyleSheet.create({
 });
 
 export * from './types';
-

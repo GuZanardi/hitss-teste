@@ -14,6 +14,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  InfiniteData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -22,6 +23,7 @@ import { CheckSquare } from 'lucide-react-native';
 import { Button, Dropdown, Header, Input, MultiDropdown } from '../../components';
 import { DropdownItem } from '../../components/Dropdown/types';
 import { ApiResponse, RootStackParamList, Task, TaskStatus } from '../../types';
+import { TasksListResponse } from '../TasksList/types';
 import { getErrorMessage } from '../../utils/errors';
 import { editTaskService } from './service';
 import { EditTaskFormData, editTaskSchema } from './types';
@@ -87,7 +89,7 @@ export const EditTaskScreen: React.FC = () => {
       editTaskService.updateTask(id, {
         ...payload,
         title: payload.title.trim(),
-        description: payload.description?.trim() || undefined,
+        description: payload.description.trim(),
       }),
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
@@ -95,33 +97,45 @@ export const EditTaskScreen: React.FC = () => {
 
       const previousTask =
         queryClient.getQueryData<ApiResponse<Task>>(['task', id]);
-      const previousTasks = queryClient.getQueriesData<ApiResponse<Task[]>>({
-        queryKey: ['tasks'],
+      const previousTasks = queryClient.getQueriesData<
+        InfiniteData<TasksListResponse>
+      >({
+        queryKey: ['tasks', 'infinite'],
       });
+      const availableTeams = queryClient.getQueryData<ApiResponse<
+        Array<{ id: string; name: string; colorHex: string }>
+      >>(['teams', { limit: 100, offset: 0 }])?.data ?? [];
+      const optimisticTask = previousTask
+        ? {
+            ...previousTask.data,
+            title: payload.title.trim(),
+            description: payload.description.trim(),
+            status: payload.status,
+            teams: availableTeams.filter((team) => payload.teamIds.includes(team.id)),
+          }
+        : undefined;
 
-      if (payload.status) {
-        if (previousTask) {
-          queryClient.setQueryData<ApiResponse<Task>>(['task', id], {
-            ...previousTask,
-            data: { ...previousTask.data, status: payload.status },
-          });
-        }
-
-        queryClient.setQueriesData<ApiResponse<Task[]>>(
-          { queryKey: ['tasks'] },
-          (previous) =>
-            previous
-              ? {
-                  ...previous,
-                  data: previous.data.map((item) =>
-                    item.id === id
-                      ? { ...item, status: payload.status }
-                      : item,
-                  ),
-                }
-              : previous,
-        );
+      if (previousTask && optimisticTask) {
+        queryClient.setQueryData<ApiResponse<Task>>(['task', id], {
+          ...previousTask,
+          data: optimisticTask,
+        });
       }
+      queryClient.setQueriesData<InfiniteData<TasksListResponse>>(
+        { queryKey: ['tasks', 'infinite'] },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                pages: previous.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((item) =>
+                    item.id === id && optimisticTask ? optimisticTask : item,
+                  ),
+                })),
+              }
+            : previous,
+      );
 
       return { previousTask, previousTasks };
     },
@@ -137,7 +151,10 @@ export const EditTaskScreen: React.FC = () => {
         getErrorMessage(error, 'Não foi possível atualizar a tarefa.'),
       );
     },
-    onSuccess: () => navigation.goBack(),
+    onSuccess: (response, { id }) => {
+      queryClient.setQueryData(['task', id], response);
+      navigation.goBack();
+    },
     onSettled: (_data, _error, { id }) => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['task', id] });
@@ -148,23 +165,28 @@ export const EditTaskScreen: React.FC = () => {
     mutationFn: editTaskService.deleteTask,
     onMutate: async (deletedId) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueriesData<ApiResponse<Task[]>>({
-        queryKey: ['tasks'],
+      const previousTasks = queryClient.getQueriesData<
+        InfiniteData<TasksListResponse>
+      >({
+        queryKey: ['tasks', 'infinite'],
       });
 
-      queryClient.setQueriesData<ApiResponse<Task[]>>(
-        { queryKey: ['tasks'] },
+      queryClient.setQueriesData<InfiniteData<TasksListResponse>>(
+        { queryKey: ['tasks', 'infinite'] },
         (previous) =>
           previous
             ? {
                 ...previous,
-                data: previous.data.filter((item) => item.id !== deletedId),
-                meta: previous.meta
-                  ? {
-                      ...previous.meta,
-                      total: Math.max(0, previous.meta.total - 1),
-                    }
-                  : undefined,
+                pages: previous.pages.map((page) => ({
+                  ...page,
+                  data: page.data.filter((item) => item.id !== deletedId),
+                  meta: page.meta
+                    ? {
+                        ...page.meta,
+                        total: Math.max(0, page.meta.total - 1),
+                      }
+                    : undefined,
+                })),
               }
             : previous,
       );
@@ -270,6 +292,7 @@ export const EditTaskScreen: React.FC = () => {
                 onBlur={onBlur}
                 multiline
                 numberOfLines={4}
+                error={errors.description?.message}
               />
             )}
           />

@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
 import { TeamsRepository } from './teams.repository';
 import { NotFoundException } from '@nestjs/common';
@@ -18,23 +17,15 @@ describe('TeamsService', () => {
   };
 
   beforeEach(async () => {
-    const mockRepo = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
+    const mockRepo = Object.create(TeamsRepository.prototype) as TeamsRepository;
+    vi.spyOn(mockRepo, 'create').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'findAll').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'findById').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'update').mockImplementation(vi.fn());
+    vi.spyOn(mockRepo, 'delete').mockImplementation(vi.fn());
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TeamsService,
-        { provide: TeamsRepository, useValue: mockRepo },
-      ],
-    }).compile();
-
-    service = module.get<TeamsService>(TeamsService);
-    repository = module.get(TeamsRepository);
+    repository = mockRepo;
+    service = new TeamsService(mockRepo);
   });
 
   it('should be defined', () => {
@@ -88,6 +79,30 @@ describe('TeamsService', () => {
         }),
       );
     });
+
+    it('trims the search term and applies pagination metadata', async () => {
+      repository.findAll.mockResolvedValue([[mockTeam], 4]);
+      const result = await service.findAll({
+        search: '  Claro ',
+        limit: 2,
+        offset: 2,
+      });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { name: { contains: 'Claro' } },
+          skip: 2,
+          take: 2,
+        }),
+      );
+      expect(result.meta).toEqual({ total: 4, limit: 2, offset: 2, hasMore: true });
+    });
+
+    it('returns an empty page and propagates repository errors', async () => {
+      repository.findAll.mockResolvedValue([[], 0]);
+      expect((await service.findAll({})).meta.hasMore).toBe(false);
+      repository.findAll.mockRejectedValue(new Error('database unavailable'));
+      await expect(service.findAll({})).rejects.toThrow('database unavailable');
+    });
   });
 
   describe('findOne', () => {
@@ -114,6 +129,25 @@ describe('TeamsService', () => {
 
       const result = await service.remove('team-1');
       expect(result).toEqual(mockTeam);
+    });
+
+    it('updates an existing team and rejects update or delete for missing teams', async () => {
+      repository.findById.mockResolvedValue(mockTeam);
+      repository.update.mockResolvedValue({ ...mockTeam, name: 'Novo nome' });
+      await expect(
+        service.update('team-1', { name: 'Novo nome' }),
+      ).resolves.toMatchObject({ name: 'Novo nome' });
+      repository.findById.mockResolvedValue(null);
+      await expect(service.update('missing', { name: 'X' })).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+    });
+
+    it('propagates repository write failures', async () => {
+      repository.findById.mockResolvedValue(mockTeam);
+      repository.delete.mockRejectedValue(new Error('delete failed'));
+      await expect(service.remove('team-1')).rejects.toThrow('delete failed');
     });
   });
 });

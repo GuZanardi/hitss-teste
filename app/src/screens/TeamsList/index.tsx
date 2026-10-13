@@ -7,13 +7,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
-  keepPreviousData,
-  useQuery,
+  InfiniteData,
+  useInfiniteQuery,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
@@ -28,35 +27,55 @@ export const TeamsListScreen: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
-  const [offset, setOffset] = useState(0);
   const PAGE_SIZE = 10;
+  const queryKey = ['teams', 'infinite', { search: search.trim(), limit: PAGE_SIZE }];
 
-  // React Query consumindo o service dedicado da tela
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['teams', { search, limit: PAGE_SIZE, offset }],
-    queryFn: () => teamsListService.fetchTeams({ search, limit: PAGE_SIZE, offset }),
-    placeholderData: keepPreviousData,
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      teamsListService.fetchTeams({
+        search: search.trim() || undefined,
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta?.hasMore
+        ? lastPage.meta.offset + lastPage.meta.limit
+        : undefined,
   });
 
-  // Optimistic update na exclusão de times
   const deleteMutation = useMutation({
     mutationFn: (id: string) => teamsListService.deleteTeam(id),
     onMutate: async (deletedId: string) => {
       await queryClient.cancelQueries({ queryKey: ['teams'] });
-      const previousData = queryClient.getQueriesData<TeamsListResponse>({
-        queryKey: ['teams'],
+      const previousData = queryClient.getQueriesData<
+        InfiniteData<TeamsListResponse>
+      >({
+        queryKey: ['teams', 'infinite'],
       });
 
-      queryClient.setQueriesData<TeamsListResponse>(
-        { queryKey: ['teams'] },
+      queryClient.setQueriesData<InfiniteData<TeamsListResponse>>(
+        { queryKey: ['teams', 'infinite'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            data: old.data.filter((team) => team.id !== deletedId),
-            meta: old.meta
-              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
-              : undefined,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.filter((team) => team.id !== deletedId),
+              meta: page.meta
+                ? { ...page.meta, total: Math.max(0, page.meta.total - 1) }
+                : undefined,
+            })),
           };
         },
       );
@@ -73,25 +92,13 @@ export const TeamsListScreen: React.FC = () => {
       );
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['teams'] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 
-  const teams = data?.data || [];
-  const meta = data?.meta;
-
-  const handleNextPage = () => {
-    if (meta?.hasMore && !isFetching) {
-      setOffset((prev) => prev + PAGE_SIZE);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (offset > 0 && !isFetching) {
-      setOffset((prev) => Math.max(0, prev - PAGE_SIZE));
-    }
-  };
+  const teams = data?.pages.flatMap((page) => page.data) ?? [];
+  const total = data?.pages[0]?.meta?.total;
 
   return (
     <View className="flex-1 bg-background" style={styles.container}>
@@ -104,10 +111,7 @@ export const TeamsListScreen: React.FC = () => {
           placeholder="Busque um time"
           placeholderTextColor="#7C7C8A"
           value={search}
-          onChangeText={(text) => {
-            setSearch(text);
-            setOffset(0);
-          }}
+          onChangeText={setSearch}
         />
         <Search color="#00B37E" size={20} style={styles.searchIcon} />
       </View>
@@ -123,14 +127,15 @@ export const TeamsListScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           refreshControl={
             <RefreshControl
-              refreshing={isFetching && offset === 0}
-              onRefresh={() => {
-                setOffset(0);
-                refetch();
-              }}
+              refreshing={isFetching && !isFetchingNextPage}
+              onRefresh={() => void refetch()}
               tintColor="#00B37E"
             />
           }
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+          }}
+          onEndReachedThreshold={0.5}
           renderItem={({ item }) => (
             <TeamCard
               team={item}
@@ -140,6 +145,7 @@ export const TeamsListScreen: React.FC = () => {
                   teamName: item.name,
                 })
               }
+              onEdit={() => navigation.navigate('EditTeam', { teamId: item.id })}
               onDelete={() => deleteMutation.mutate(item.id)}
             />
           )}
@@ -153,34 +159,12 @@ export const TeamsListScreen: React.FC = () => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={
-            meta && meta.total > PAGE_SIZE ? (
-              <View style={styles.paginationRow}>
-                <TouchableOpacity
-                  disabled={offset === 0 || isFetching}
-                  onPress={handlePrevPage}
-                  style={[
-                    styles.paginationButton,
-                    offset === 0 ? styles.paginationDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.paginationText}>Anterior</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.paginationInfo}>
-                  {offset + 1} - {Math.min(offset + PAGE_SIZE, meta.total)} de {meta.total}
-                </Text>
-
-                <TouchableOpacity
-                  disabled={!meta.hasMore || isFetching}
-                  onPress={handleNextPage}
-                  style={[
-                    styles.paginationButton,
-                    !meta.hasMore ? styles.paginationDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.paginationText}>Próxima</Text>
-                </TouchableOpacity>
-              </View>
+            isFetchingNextPage ? (
+              <ActivityIndicator color="#00B37E" style={styles.footerLoader} />
+            ) : hasNextPage ? (
+              <Text style={styles.moreItemsText}>
+                {total ? `Mais times disponíveis (${total})` : ''}
+              </Text>
             ) : null
           }
         />
@@ -241,32 +225,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  paginationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  footerLoader: {
     paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#29292E',
-    marginTop: 8,
   },
-  paginationButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#202024',
-    borderRadius: 6,
-  },
-  paginationDisabled: {
-    opacity: 0.4,
-  },
-  paginationText: {
-    color: '#00B37E',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  paginationInfo: {
+  moreItemsText: {
     color: '#8D8D99',
     fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
   footer: {
     paddingVertical: 16,

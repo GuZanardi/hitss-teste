@@ -45,6 +45,7 @@
     "metro-transform-worker": "0.81.5",
     "react-test-renderer": "18.3.1",
     "react-native-dotenv": "^3.4.11",
+    "reactotron-react-native": "^5.3.1",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.19",
     "typescript": "^5.6.3"

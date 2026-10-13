@@ -41,6 +41,7 @@ export interface ApiResponse<T> {
 export type RootStackParamList = {
   TeamsList: undefined;
   CreateTeam: undefined;
+  EditTeam: { teamId: string };
   TasksList: { initialTeamId?: string; teamName?: string } | undefined;
   CreateTask: { preselectedTeamId?: string } | undefined;
   EditTask: { taskId: string };

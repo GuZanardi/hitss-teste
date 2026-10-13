@@ -35,6 +35,7 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
       <TouchableOpacity
+        accessibilityRole="button"
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
         style={[styles.selector, error ? styles.selectorError : null]}
@@ -96,6 +97,7 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
                 const isSelected = selectedValues.includes(item.value);
                 return (
                   <TouchableOpacity
+                    accessibilityRole="button"
                     activeOpacity={0.7}
                     onPress={() => toggleItem(item.value)}
                     style={[
@@ -307,4 +309,3 @@ const styles = StyleSheet.create({
 });
 
 export * from './types';
-

@@ -4,6 +4,8 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsNotEmpty,
+  Matches,
   MinLength,
 } from 'class-validator';
 import { TaskStatus } from '@prisma/client';
@@ -14,9 +16,10 @@ export class UpdateTaskDto {
   @MinLength(3, { message: 'O título deve ter no mínimo 3 caracteres.' })
   title?: string;
 
-  @IsOptional()
   @IsString({ message: 'A descrição deve ser um texto.' })
-  description?: string;
+  @IsNotEmpty({ message: 'A descrição da tarefa é obrigatória.' })
+  @Matches(/\S/, { message: 'A descrição da tarefa é obrigatória.' })
+  description: string;
 
   @IsOptional()
   @IsEnum(TaskStatus, {
@@ -33,4 +36,3 @@ export class UpdateTaskDto {
   @IsString({ each: true, message: 'Cada identificador de time deve ser uma string.' })
   teamIds?: string[];
 }
-

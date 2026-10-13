@@ -15,6 +15,8 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.topNavigation}>
         {onBack ? (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
             activeOpacity={0.7}
             onPress={onBack}
             style={styles.navButton}
@@ -27,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {onDelete ? (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Excluir"
             activeOpacity={0.7}
             onPress={onDelete}
             style={styles.navButton}
@@ -88,4 +92,3 @@ const styles = StyleSheet.create({
 });
 
 export * from './types';
-

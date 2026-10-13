@@ -6,13 +6,13 @@ Aplicativo mobile para organizar times e tarefas. O repositório reúne o app Re
 
 - **MySQL e Prisma:** o MySQL atende ao relacionamento entre tarefas e times, e o Prisma mantém o modelo e as migrations versionados. A associação entre tarefa e time é muitos-para-muitos.
 - **API NestJS:** módulos, controllers, services e repositories separam HTTP, regras de negócio e persistência. As respostas de sucesso seguem `{ data, meta? }`; erros seguem `{ error: { code, message, details? } }`.
-- **App React Native CLI:** o frontend usa TypeScript, React Navigation e NativeWind, sem Expo. React Hook Form e Zod validam os formulários. React Query gerencia o estado remoto e as atualizações otimistas de status e exclusões.
+- **App React Native CLI:** o frontend usa TypeScript, React Navigation e NativeWind, sem Expo. React Hook Form e Zod validam os formulários. React Query gerencia o estado remoto, atualizações otimistas de tarefas e times e paginação incremental das listagens.
 - **Organização:** componentes reutilizáveis ficam em `app/src/components`; cada tela tem uma pasta própria com `index.tsx`, `types.ts` e `service.ts`; a API e o Prisma ficam em `api/`.
 
 ## 2. Modelo de dados
 
 - **Team:** nome, cor hexadecimal, descrição opcional e datas de criação/atualização.
-- **Task:** título, descrição opcional, status (`PENDING`, `IN_PROGRESS` ou `COMPLETED`), prazo opcional e datas de criação/atualização.
+- **Task:** título, descrição, status (`PENDING`, `IN_PROGRESS` ou `COMPLETED`), prazo opcional e datas de criação/atualização.
 - **TaskTeam:** tabela de associação que permite que uma tarefa pertença a zero, um ou vários times. A remoção de um time ou tarefa também remove suas associações.
 
 O schema e as migrations estão em `api/prisma/`. Os dados iniciais estão em `api/fixtures/seed-data.json` e incluem três times e dez tarefas.
@@ -96,7 +96,18 @@ curl -X POST 'http://localhost:3333/api/tasks' \
   -d '{"title":"Revisar cadastro","description":"Validar o fluxo mobile","status":"IN_PROGRESS","teamIds":["ID_DO_TIME_1","ID_DO_TIME_2"]}'
 ```
 
-As listagens aceitam `limit` e `offset`; a de tarefas também aceita `teamId`, `status`, `search` e `sort`. Esses exemplos também podem ser importados em Postman ou Insomnia.
+As listagens aceitam `limit` e `offset`; a de times aceita `search` e a de tarefas aceita `teamId`, `status`, `search` e `sort` (`createdAt`, `title`, `dueDate` ou `status`, seguido de `:asc` ou `:desc`). O app solicita páginas adicionais conforme o usuário rola a lista. Esses exemplos também podem ser importados em Postman ou Insomnia.
+
+### Testes
+
+```bash
+cd api
+npm test
+npm run test:e2e
+
+cd ../app
+npm test -- --runInBand
+```
 
 ## 5. O que evoluiria em produção
 
