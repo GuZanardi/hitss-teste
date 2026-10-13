@@ -18,6 +18,7 @@ import {
 } from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
 import { Header, TeamCard, Button } from '../../components';
+import { useDebounce } from '../../hooks/useDebounce';
 import { teamsListService } from './service';
 import { TeamsListNavigationProp, TeamsListResponse } from './types';
 import { getErrorMessage } from '../../utils/errors';
@@ -27,8 +28,14 @@ export const TeamsListScreen: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const PAGE_SIZE = 10;
-  const queryKey = ['teams', 'infinite', { search: search.trim(), limit: PAGE_SIZE }];
+  const debounceSearch = useDebounce(setSearchQuery, 500);
+  const queryKey = [
+    'teams',
+    'infinite',
+    { search: searchQuery.trim(), limit: PAGE_SIZE },
+  ];
 
   const {
     data,
@@ -43,7 +50,7 @@ export const TeamsListScreen: React.FC = () => {
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       teamsListService.fetchTeams({
-        search: search.trim() || undefined,
+        search: searchQuery.trim() || undefined,
         limit: PAGE_SIZE,
         offset: pageParam,
       }),
@@ -111,7 +118,10 @@ export const TeamsListScreen: React.FC = () => {
           placeholder="Busque um time"
           placeholderTextColor="#7C7C8A"
           value={search}
-          onChangeText={setSearch}
+          onChangeText={(value) => {
+            setSearch(value);
+            debounceSearch(value);
+          }}
         />
         <Search color="#00B37E" size={20} style={styles.searchIcon} />
       </View>

@@ -17,6 +17,7 @@ import { Search } from 'lucide-react-native';
 import { Button, Dropdown, Header, TaskCard } from '../../components';
 import { DropdownItem } from '../../components/Dropdown/types';
 import { useTasks, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useDebounce } from '../../hooks/useDebounce';
 import { RootStackParamList, TaskStatus } from '../../types';
 import { getErrorMessage } from '../../utils/errors';
 import { TasksListRouteProp } from './types';
@@ -43,9 +44,11 @@ export const TasksListScreen: React.FC = () => {
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'TasksList'>>();
   const route = useRoute<TasksListRouteProp>();
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [teamId, setTeamId] = useState(route.params?.initialTeamId ?? '');
   const [status, setStatus] = useState<TaskStatus | undefined>();
   const [sort, setSort] = useState('createdAt:desc');
+  const debounceSearch = useDebounce(setSearchQuery, 500);
 
   useEffect(() => {
     if (route.params?.initialTeamId) {
@@ -56,7 +59,7 @@ export const TasksListScreen: React.FC = () => {
   const queryParams = {
     teamId: teamId || undefined,
     status,
-    search: search.trim() || undefined,
+    search: searchQuery.trim() || undefined,
     limit: PAGE_SIZE,
     sort,
   };
@@ -121,7 +124,10 @@ export const TasksListScreen: React.FC = () => {
           placeholder="Busque uma tarefa"
           placeholderTextColor="#7C7C8A"
           value={search}
-          onChangeText={(value) => changeFilter(() => setSearch(value))}
+          onChangeText={(value) => {
+            setSearch(value);
+            debounceSearch(value);
+          }}
           returnKeyType="search"
         />
         <Search color="#00B37E" size={20} style={styles.searchIcon} />
