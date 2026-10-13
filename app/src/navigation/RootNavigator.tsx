@@ -1,11 +1,11 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { TeamsListScreen } from '../screens/TeamsListScreen';
-import { CreateTeamScreen } from '../screens/CreateTeamScreen';
-import { TasksListScreen } from '../screens/TasksListScreen';
-import { CreateTaskScreen } from '../screens/CreateTaskScreen';
-import { EditTaskScreen } from '../screens/EditTaskScreen';
+import { TeamsListScreen } from '../screens/TeamsList';
+import { CreateTeamScreen } from '../screens/CreateTeam';
+import { TasksListScreen } from '../screens/TasksList';
+import { CreateTaskScreen } from '../screens/CreateTask';
+import { EditTaskScreen } from '../screens/EditTask';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,4 +27,3 @@ export const RootNavigator: React.FC = () => {
     </Stack.Navigator>
   );
 };
-

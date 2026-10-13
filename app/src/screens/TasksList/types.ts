@@ -1,6 +1,12 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, Task, TaskStatus, PaginationMeta, Team } from '../../types';
+import {
+  RootStackParamList,
+  Task,
+  TaskStatus,
+  PaginationMeta,
+  Team,
+} from '../../types';
 
 export type TasksListNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -26,4 +32,3 @@ export interface TasksListResponse {
 export interface TeamsFilterResponse {
   data: Team[];
 }
-

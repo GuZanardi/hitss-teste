@@ -15,9 +15,14 @@ import { Users } from 'lucide-react-native';
 import { Header, Input, ColorInput, Button } from '../../components';
 import { createTeamService } from './service';
 import { createTeamSchema, CreateTeamFormData } from './types';
+import { getErrorMessage } from '../../utils/errors';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types';
 
 export const CreateTeamScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<
+    NativeStackNavigationProp<RootStackParamList, 'CreateTeam'>
+  >();
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
@@ -26,11 +31,11 @@ export const CreateTeamScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       navigation.goBack();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        'Não foi possível criar o time. Verifique os dados.';
-      Alert.alert('Erro ao criar time', message);
+    onError: (error: unknown) => {
+      Alert.alert(
+        'Erro ao criar time',
+        getErrorMessage(error, 'Não foi possível criar o time. Verifique os dados.'),
+      );
     },
   });
 
@@ -58,6 +63,7 @@ export const CreateTeamScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-background"
       style={styles.container}
     >
       <ScrollView
@@ -154,4 +160,3 @@ const styles = StyleSheet.create({
 
 export * from './types';
 export * from './service';
-

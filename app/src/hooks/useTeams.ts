@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { teamsService } from '../services/teams.service';
 import { Team, ApiResponse } from '../types';
 
@@ -8,8 +13,8 @@ export function useTeams(params?: { search?: string; limit?: number; offset?: nu
   return useQuery({
     queryKey: [...TEAMS_QUERY_KEY, params],
     queryFn: () => teamsService.getTeams(params),
-    keepPreviousData: true,
-  } as any);
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useTeam(id?: string) {
@@ -75,4 +80,3 @@ export function useDeleteTeam() {
     },
   });
 }
-

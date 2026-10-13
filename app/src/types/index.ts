@@ -45,4 +45,3 @@ export type RootStackParamList = {
   CreateTask: { preselectedTeamId?: string } | undefined;
   EditTask: { taskId: string };
 };
-

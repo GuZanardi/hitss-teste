@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -20,8 +20,10 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <NavigationContainer>
-          <StatusBar style="light" backgroundColor="#121214" />
-          <RootNavigator />
+          <View className="flex-1 bg-background">
+            <StatusBar barStyle="light-content" backgroundColor="#121214" />
+            <RootNavigator />
+          </View>
         </NavigationContainer>
       </QueryClientProvider>
     </SafeAreaProvider>

@@ -8,13 +8,20 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
 import { Header, TeamCard, Button } from '../../components';
 import { teamsListService } from './service';
 import { TeamsListNavigationProp, TeamsListResponse } from './types';
+import { getErrorMessage } from '../../utils/errors';
 
 export const TeamsListScreen: React.FC = () => {
   const navigation = useNavigation<TeamsListNavigationProp>();
@@ -28,8 +35,8 @@ export const TeamsListScreen: React.FC = () => {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['teams', { search, limit: PAGE_SIZE, offset }],
     queryFn: () => teamsListService.fetchTeams({ search, limit: PAGE_SIZE, offset }),
-    keepPreviousData: true,
-  } as any);
+    placeholderData: keepPreviousData,
+  });
 
   // Optimistic update na exclusão de times
   const deleteMutation = useMutation({
@@ -60,6 +67,10 @@ export const TeamsListScreen: React.FC = () => {
       if (context?.previousData) {
         context.previousData.forEach(([key, val]) => queryClient.setQueryData(key, val));
       }
+      Alert.alert(
+        'Erro ao excluir time',
+        getErrorMessage(_err, 'Não foi possível excluir o time.'),
+      );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -83,7 +94,7 @@ export const TeamsListScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background" style={styles.container}>
       <Header title="Times" subtitle="Acesse um dos times" />
 
       {/* Input de busca conforme Figma */}
@@ -265,4 +276,3 @@ const styles = StyleSheet.create({
 
 export * from './types';
 export * from './service';
-
