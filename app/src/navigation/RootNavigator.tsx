@@ -16,7 +16,6 @@ export const RootNavigator: React.FC = () => {
       initialRouteName="TeamsList"
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#121214' },
         animation: 'slide_from_right',
       }}
     >

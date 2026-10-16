@@ -1,7 +1,6 @@
 import React from "react";
 import {
   View,
-  StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -65,13 +64,13 @@ export const CreateTeamScreen: React.FC = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
-      style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="flex-grow justify-between px-5 pb-6 pt-12">
         <Header
           onBack={() => navigation.goBack()}
           renderIcon={() => <Users color="#00B37E" size={48} />}
@@ -79,7 +78,7 @@ export const CreateTeamScreen: React.FC = () => {
           subtitle="crie seu time para gerenciar as tarefas"
         />
 
-        <View style={styles.form}>
+        <View className="mt-2">
           <Controller
             control={control}
             name="name"
@@ -126,37 +125,17 @@ export const CreateTeamScreen: React.FC = () => {
           />
         </View>
 
-        <View style={styles.footer}>
+        <View className="mt-6 pb-2">
           <Button
             title="Criar"
             loading={createMutation.isPending}
             onPress={handleSubmit(onSubmit)}
           />
         </View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121214",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 24,
-    flexGrow: 1,
-    justifyContent: "space-between",
-  },
-  form: {
-    marginTop: 8,
-  },
-  footer: {
-    marginTop: 24,
-    paddingBottom: 8,
-  },
-});
 
 export * from "./schema";

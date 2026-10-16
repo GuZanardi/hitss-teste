@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  StyleSheet,
 } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { DropdownProps, DropdownItem } from './types';
+import { teamColorClass } from '../../utils/teamColorClass';
 
 export const Dropdown: React.FC<DropdownProps> = ({
   label,
@@ -22,29 +22,23 @@ export const Dropdown: React.FC<DropdownProps> = ({
   const selectedItem = items.find((item) => item.value === value);
 
   return (
-    <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View className="mb-4 w-full">
+      {label ? <Text className="mb-2 text-sm font-medium text-[#E1E1E6]">{label}</Text> : null}
 
       <TouchableOpacity
         accessibilityRole="button"
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
-        style={[styles.selector, error ? styles.selectorError : null]}
+        className={`h-[52px] flex-row items-center justify-between rounded-lg border bg-background px-4 ${
+          error ? 'border-red-500' : 'border-border'
+        }`}
       >
-        <View style={styles.selectionInfo}>
+        <View className="flex-1 flex-row items-center gap-2.5">
           {selectedItem?.color ? (
-            <View
-              style={[
-                styles.itemColorDot,
-                { backgroundColor: selectedItem.color },
-              ]}
-            />
+            <View className={`h-3 w-3 rounded-full ${teamColorClass(selectedItem.color)}`} />
           ) : null}
           <Text
-            style={[
-              styles.selectorText,
-              !selectedItem ? styles.placeholderText : null,
-            ]}
+            className={`text-base ${selectedItem ? 'text-white' : 'text-[#7C7C8A]'}`}
           >
             {selectedItem ? selectedItem.label : placeholder}
           </Text>
@@ -53,7 +47,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         <ChevronDown color="#7C7C8A" size={20} />
       </TouchableOpacity>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
 
       <Modal
         visible={modalVisible}
@@ -61,10 +55,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{label || placeholder}</Text>
+        <View className="flex-1 items-center justify-center bg-black/70 p-6">
+          <View className="max-h-[70%] w-full max-w-[340px] rounded-xl border border-[#2E2E38] bg-surface p-5">
+            <View className="mb-4 flex-row items-center justify-between border-b border-[#2E2E38] pb-3">
+              <Text className="text-base font-semibold text-white">{label || placeholder}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X color="#8D8D99" size={20} />
               </TouchableOpacity>
@@ -83,25 +77,18 @@ export const Dropdown: React.FC<DropdownProps> = ({
                       onSelect(item.value);
                       setModalVisible(false);
                     }}
-                    style={[
-                      styles.optionItem,
-                      isSelected ? styles.selectedOptionItem : null,
-                    ]}
+                    className={`flex-row items-center justify-between rounded-md px-3 py-3.5 ${
+                      isSelected ? 'bg-border' : ''
+                    }`}
                   >
-                    <View style={styles.selectionInfo}>
+                    <View className="flex-1 flex-row items-center gap-2.5">
                       {item.color ? (
-                        <View
-                          style={[
-                            styles.itemColorDot,
-                            { backgroundColor: item.color },
-                          ]}
-                        />
+                        <View className={`h-3 w-3 rounded-full ${teamColorClass(item.color)}`} />
                       ) : null}
                       <Text
-                        style={[
-                          styles.optionLabel,
-                          isSelected ? styles.selectedOptionLabel : null,
-                        ]}
+                        className={`text-[15px] ${
+                          isSelected ? 'font-semibold text-brand' : 'text-[#C4C4CC]'
+                        }`}
                       >
                         {item.label}
                       </Text>
@@ -118,105 +105,5 @@ export const Dropdown: React.FC<DropdownProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  label: {
-    color: '#E1E1E6',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  selector: {
-    backgroundColor: '#121214',
-    borderWidth: 1,
-    borderColor: '#29292E',
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  selectionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  itemColorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  selectorText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  placeholderText: {
-    color: '#7C7C8A',
-  },
-  selectorError: {
-    borderColor: '#EF4444',
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#202024',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 340,
-    maxHeight: '70%',
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2E2E38',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2E2E38',
-    paddingBottom: 12,
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  selectedOptionItem: {
-    backgroundColor: '#29292E',
-  },
-  optionLabel: {
-    color: '#C4C4CC',
-    fontSize: 15,
-  },
-  selectedOptionLabel: {
-    color: '#00B37E',
-    fontWeight: '600',
-  },
-});
 
 export * from './types';

@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  StyleSheet,
 } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { MultiDropdownProps } from './types';
+import { teamColorClass } from '../../utils/teamColorClass';
 
 export const MultiDropdown: React.FC<MultiDropdownProps> = ({
   label,
@@ -31,34 +31,28 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
   const selectedItems = items.filter((item) => selectedValues.includes(item.value));
 
   return (
-    <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View className="mb-4 w-full">
+      {label ? <Text className="mb-2 text-sm font-medium text-[#E1E1E6]">{label}</Text> : null}
 
       <TouchableOpacity
         accessibilityRole="button"
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
-        style={[styles.selector, error ? styles.selectorError : null]}
+        className={`min-h-[52px] flex-row items-center justify-between rounded-lg border bg-background px-4 py-2 ${
+          error ? 'border-red-500' : 'border-border'
+        }`}
       >
-        <View style={styles.selectedChipsContainer}>
+        <View className="flex-1 flex-row flex-wrap gap-1.5 pr-2">
           {selectedItems.length === 0 ? (
-            <Text style={styles.placeholderText}>{placeholder}</Text>
+            <Text className="text-base text-[#7C7C8A]">{placeholder}</Text>
           ) : (
             selectedItems.map((item) => (
               <View
                 key={item.value}
-                style={[
-                  styles.chip,
-                  { borderColor: item.color || '#00B37E' },
-                ]}
+                className={`flex-row items-center gap-1.5 rounded-md border bg-surface px-2 py-1 ${teamColorClass(item.color, 'border')}`}
               >
-                <View
-                  style={[
-                    styles.chipDot,
-                    { backgroundColor: item.color || '#00B37E' },
-                  ]}
-                />
-                <Text style={styles.chipText}>{item.label}</Text>
+                <View className={`h-2 w-2 rounded-full ${teamColorClass(item.color)}`} />
+                <Text className="text-xs font-medium text-white">{item.label}</Text>
               </View>
             ))
           )}
@@ -67,7 +61,7 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
         <ChevronDown color="#7C7C8A" size={20} />
       </TouchableOpacity>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
 
       <Modal
         visible={modalVisible}
@@ -75,10 +69,10 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+        <View className="flex-1 items-center justify-center bg-black/70 p-6">
+          <View className="max-h-[75%] w-full max-w-[340px] rounded-xl border border-[#2E2E38] bg-surface p-5">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-white">
                 {label || 'Selecione um ou mais times'}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -86,7 +80,7 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalSub}>
+            <Text className="mb-4 text-xs text-textSecondary">
               Uma tarefa pode pertencer a nenhum ou múltiplos times.
             </Text>
 
@@ -100,35 +94,27 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
                     accessibilityRole="button"
                     activeOpacity={0.7}
                     onPress={() => toggleItem(item.value)}
-                    style={[
-                      styles.optionItem,
-                      isSelected ? styles.selectedOptionItem : null,
-                    ]}
+                    className={`mb-1 flex-row items-center justify-between rounded-md px-2.5 py-3 ${
+                      isSelected ? 'bg-border' : ''
+                    }`}
                   >
-                    <View style={styles.optionInfo}>
+                    <View className="flex-row items-center gap-2.5">
                       <View
-                        style={[
-                          styles.checkbox,
-                          isSelected ? styles.checkboxActive : null,
-                        ]}
+                        className={`h-5 w-5 items-center justify-center rounded border-[1.5px] ${
+                          isSelected ? 'border-brand bg-brand' : 'border-[#7C7C8A]'
+                        }`}
                       >
                         {isSelected ? <Check color="#FFFFFF" size={14} /> : null}
                       </View>
 
                       {item.color ? (
-                        <View
-                          style={[
-                            styles.chipDot,
-                            { backgroundColor: item.color },
-                          ]}
-                        />
+                        <View className={`h-2 w-2 rounded-full ${teamColorClass(item.color)}`} />
                       ) : null}
 
                       <Text
-                        style={[
-                          styles.optionLabel,
-                          isSelected ? styles.selectedOptionLabel : null,
-                        ]}
+                        className={`text-[15px] ${
+                          isSelected ? 'font-semibold text-white' : 'text-[#C4C4CC]'
+                        }`}
                       >
                         {item.label}
                       </Text>
@@ -137,16 +123,16 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
                 );
               }}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Nenhum time disponível.</Text>
+                <Text className="py-5 text-center text-[#7C7C8A]">Nenhum time disponível.</Text>
               }
             />
 
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setModalVisible(false)}
-              style={styles.confirmButton}
+              className="mt-4 h-11 items-center justify-center rounded-lg bg-brand"
             >
-              <Text style={styles.confirmButtonText}>Concluir seleção</Text>
+              <Text className="text-[15px] font-semibold text-white">Concluir seleção</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -154,158 +140,5 @@ export const MultiDropdown: React.FC<MultiDropdownProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  label: {
-    color: '#E1E1E6',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  selector: {
-    backgroundColor: '#121214',
-    borderWidth: 1,
-    borderColor: '#29292E',
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    minHeight: 52,
-    paddingVertical: 8,
-  },
-  selectedChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    flex: 1,
-    paddingRight: 8,
-  },
-  placeholderText: {
-    color: '#7C7C8A',
-    fontSize: 16,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#202024',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 6,
-  },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chipText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  selectorError: {
-    borderColor: '#EF4444',
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#202024',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 340,
-    maxHeight: '75%',
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2E2E38',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalSub: {
-    color: '#8D8D99',
-    fontSize: 12,
-    marginBottom: 16,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  selectedOptionItem: {
-    backgroundColor: '#29292E',
-  },
-  optionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: '#7C7C8A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: '#00B37E',
-    borderColor: '#00B37E',
-  },
-  optionLabel: {
-    color: '#C4C4CC',
-    fontSize: 15,
-  },
-  selectedOptionLabel: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: '#7C7C8A',
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
-  confirmButton: {
-    backgroundColor: '#00B37E',
-    borderRadius: 8,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-});
 
 export * from './types';

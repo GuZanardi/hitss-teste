@@ -21,7 +21,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <NavigationContainer>
           <View className="flex-1 bg-background">
-            <StatusBar barStyle="light-content" backgroundColor="#121214" />
+            <StatusBar barStyle="light-content" />
             <RootNavigator />
           </View>
         </NavigationContainer>

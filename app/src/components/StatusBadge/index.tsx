@@ -1,42 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { StatusBadgeProps } from './types';
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   let label = 'pendente';
-  let bgColor = '#451A1A';
-  let textColor = '#F87171';
+  let backgroundClass = 'bg-status-pendingBg';
+  let textClass = 'text-status-pending';
 
   if (status === 'IN_PROGRESS') {
     label = 'em progresso';
-    bgColor = '#45321A';
-    textColor = '#FBBF24';
+    backgroundClass = 'bg-status-progressBg';
+    textClass = 'text-status-progress';
   } else if (status === 'COMPLETED') {
     label = 'concluída';
-    bgColor = '#1A4532';
-    textColor = '#34D399';
+    backgroundClass = 'bg-status-completedBg';
+    textClass = 'text-status-completed';
   }
 
   return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color: textColor }]}>{label}</Text>
+    <View className={`self-start rounded-full px-2.5 py-[3px] ${backgroundClass}`}>
+      <Text className={`text-[11px] font-semibold lowercase ${textClass}`}>{label}</Text>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 9999,
-    alignSelf: 'flex-start',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'lowercase',
-  },
-});
-
 export * from './types';
-

@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TextInput,
-  StyleSheet,
   ActivityIndicator,
   RefreshControl,
   Alert,
@@ -44,13 +43,23 @@ export const TeamsListScreen: React.FC = () => {
   const teams = data?.pages.flatMap((page) => page.data) ?? [];
   const total = data?.pages[0]?.meta?.total;
 
+  const handleDeleteTeam = (teamId: string) => {
+    deleteMutation.mutate(teamId, {
+      onError: (error: unknown) =>
+        Alert.alert(
+          "Erro ao excluir time",
+          getErrorMessage(error, "Não foi possível excluir o time."),
+        ),
+    });
+  };
+
   return (
-    <View className="flex-1 bg-background" style={styles.container}>
+    <View className="flex-1 bg-background px-5 pt-12">
       <Header title="Times" subtitle="Acesse um dos times" />
 
-      <View style={styles.searchContainer}>
+      <View className="relative mb-5">
         <TextInput
-          style={styles.searchInput}
+          className="h-[52px] rounded-lg border border-border bg-surface pl-4 pr-12 text-[15px] text-white"
           placeholder="Busque um time"
           placeholderTextColor="#7C7C8A"
           value={search}
@@ -59,15 +68,18 @@ export const TeamsListScreen: React.FC = () => {
             debounceSearch(value);
           }}
         />
-        <Search color="#00B37E" size={20} style={styles.searchIcon} />
+        <View className="absolute right-4 top-4">
+          <Search color="#00B37E" size={20} />
+        </View>
       </View>
 
       {isLoading && teams.length === 0 ? (
-        <View style={styles.centerContainer}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#00B37E" size="large" />
         </View>
       ) : (
         <FlatList
+          className="flex-1"
           data={teams}
           keyExtractor={(item) => item.id}
           refreshControl={
@@ -93,36 +105,27 @@ export const TeamsListScreen: React.FC = () => {
               onEdit={() =>
                 navigation.navigate("EditTeam", { teamId: item.id })
               }
-              onDelete={() =>
-                deleteMutation.mutate(item.id, {
-                  onError: (error: unknown) =>
-                    Alert.alert(
-                      "Erro ao excluir time",
-                      getErrorMessage(
-                        error,
-                        "Não foi possível excluir o time.",
-                      ),
-                    ),
-                })
-              }
+              onDelete={() => handleDeleteTeam(item.id)}
             />
           )}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+            <View className="items-center py-10">
+              <Text className="text-center text-sm text-textSecondary">
                 {search
                   ? "Nenhum time encontrado para a busca."
                   : "Nenhum time cadastrado ainda."}
               </Text>
             </View>
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerClassName="pb-6"
           showsVerticalScrollIndicator={false}
           ListFooterComponent={
             isFetchingNextPage ? (
-              <ActivityIndicator color="#00B37E" style={styles.footerLoader} />
+              <View className="py-4">
+                <ActivityIndicator color="#00B37E" />
+              </View>
             ) : hasNextPage ? (
-              <Text style={styles.moreItemsText}>
+              <Text className="py-2 text-center text-xs text-textSecondary">
                 {total ? `Mais times disponíveis (${total})` : ""}
               </Text>
             ) : null
@@ -130,7 +133,7 @@ export const TeamsListScreen: React.FC = () => {
         />
       )}
 
-      <View style={styles.footer}>
+      <View className="bg-background py-4">
         <Button
           title="Criar time"
           onPress={() => navigation.navigate("CreateTeam")}
@@ -139,64 +142,5 @@ export const TeamsListScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121214",
-    paddingHorizontal: 20,
-    paddingTop: 48,
-  },
-  searchContainer: {
-    position: "relative",
-    marginBottom: 20,
-  },
-  searchInput: {
-    backgroundColor: "#202024",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#29292E",
-    height: 52,
-    color: "#FFFFFF",
-    paddingLeft: 16,
-    paddingRight: 48,
-    fontSize: 15,
-  },
-  searchIcon: {
-    position: "absolute",
-    right: 16,
-    top: 16,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  emptyContainer: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  emptyText: {
-    color: "#8D8D99",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  footerLoader: {
-    paddingVertical: 16,
-  },
-  moreItemsText: {
-    color: "#8D8D99",
-    fontSize: 12,
-    textAlign: "center",
-    paddingVertical: 8,
-  },
-  footer: {
-    paddingVertical: 16,
-    backgroundColor: "#121214",
-  },
-});
 
 export * from "./schema";

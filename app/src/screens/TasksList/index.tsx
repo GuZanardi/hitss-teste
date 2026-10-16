@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -94,8 +93,22 @@ export const TasksListScreen: React.FC = () => {
     })),
   ];
 
+  const handleQuickToggleStatus = (taskId: string, nextStatus: TaskStatus) => {
+    statusMutation.mutate(
+      { id: taskId, status: nextStatus },
+      {
+        onError: (mutationError: unknown) => {
+          Alert.alert(
+            "Não foi possível atualizar a tarefa",
+            getErrorMessage(mutationError, "Tente novamente."),
+          );
+        },
+      },
+    );
+  };
+
   return (
-    <View className="flex-1 bg-background" style={styles.container}>
+    <View className="flex-1 bg-background px-5 pt-12">
       <Header
         onBack={() => navigation.goBack()}
         title="Tarefas"
@@ -106,10 +119,10 @@ export const TasksListScreen: React.FC = () => {
         }
       />
 
-      <View style={styles.searchContainer}>
+      <View className="relative mb-2">
         <TextInput
           accessibilityLabel="Buscar tarefas"
-          style={styles.searchInput}
+          className="h-[52px] rounded-lg border border-border bg-surface pl-4 pr-12 text-[15px] text-white"
           placeholder="Busque uma tarefa"
           placeholderTextColor="#7C7C8A"
           value={search}
@@ -119,11 +132,13 @@ export const TasksListScreen: React.FC = () => {
           }}
           returnKeyType="search"
         />
-        <Search color="#00B37E" size={20} style={styles.searchIcon} />
+        <View className="absolute right-4 top-4">
+          <Search color="#00B37E" size={20} />
+        </View>
       </View>
 
-      <View style={styles.listFilters}>
-        <View style={styles.filterDropdown}>
+      <View className="flex-row gap-3">
+        <View className="min-w-0 flex-1">
           <Dropdown
             label="Time"
             items={teams}
@@ -132,7 +147,7 @@ export const TasksListScreen: React.FC = () => {
             onSelect={setTeamId}
           />
         </View>
-        <View style={styles.filterDropdown}>
+        <View className="min-w-0 flex-1">
           <Dropdown
             label="Ordenar"
             items={SORT_OPTIONS}
@@ -145,16 +160,16 @@ export const TasksListScreen: React.FC = () => {
         <TouchableOpacity
           accessibilityRole="button"
           onPress={() => void refetchTeams()}
-          style={styles.teamErrorContainer}
+          className="mb-3"
         >
-          <Text style={styles.teamErrorText}>
+          <Text className="text-xs text-red-400">
             {getErrorMessage(teamsError, "Não foi possível carregar os times.")}
             {"  Tocar para tentar novamente."}
           </Text>
         </TouchableOpacity>
       ) : null}
 
-      <View style={styles.statusFilters}>
+      <View className="mb-3 flex-row flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => {
           const selected = filter.value === status;
           return (
@@ -163,17 +178,11 @@ export const TasksListScreen: React.FC = () => {
               accessibilityRole="button"
               accessibilityState={{ selected }}
               onPress={() => setStatus(filter.value)}
-              style={[
-                styles.statusFilter,
-                selected ? styles.statusFilterActive : null,
-              ]}
+              className={`rounded-full border px-3 py-2 ${
+                selected ? 'border-brand bg-brand' : 'border-border bg-surface'
+              }`}
             >
-              <Text
-                style={[
-                  styles.statusFilterText,
-                  selected ? styles.statusFilterTextActive : null,
-                ]}
-              >
+              <Text className={`text-xs font-semibold ${selected ? 'text-white' : 'text-[#C4C4CC]'}`}>
                 {filter.label}
               </Text>
             </TouchableOpacity>
@@ -182,20 +191,22 @@ export const TasksListScreen: React.FC = () => {
       </View>
 
       {isLoading && tasks.length === 0 ? (
-        <View style={styles.centerContainer}>
+        <View className="flex-1 items-center justify-center px-6">
           <ActivityIndicator color="#00B37E" size="large" />
         </View>
       ) : isError && tasks.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-center text-sm text-red-400">
             {getErrorMessage(error, "Não foi possível carregar as tarefas.")}
           </Text>
           <TouchableOpacity onPress={() => refetch()}>
-            <Text style={styles.retryText}>Tentar novamente</Text>
+            <Text className="mt-3 font-semibold text-brand">Tentar novamente</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
+          className="flex-1"
+          contentContainerClassName="flex-grow pb-3"
           data={tasks}
           keyExtractor={(item) => item.id}
           refreshControl={
@@ -216,36 +227,27 @@ export const TasksListScreen: React.FC = () => {
                 navigation.navigate("EditTask", { taskId: item.id })
               }
               onQuickToggleStatus={(next) =>
-                statusMutation.mutate(
-                  { id: item.id, status: next },
-                  {
-                    onError: (mutationError: unknown) => {
-                      Alert.alert(
-                        "Não foi possível atualizar a tarefa",
-                        getErrorMessage(mutationError, "Tente novamente."),
-                      );
-                    },
-                  },
-                )
+                handleQuickToggleStatus(item.id, next)
               }
             />
           )}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+            <View className="items-center py-10">
+              <Text className="text-center text-sm text-textSecondary">
                 {search || teamId || status
                   ? "Nenhuma tarefa corresponde aos filtros."
                   : "Nenhuma tarefa cadastrada ainda."}
               </Text>
             </View>
           }
-          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={
             isFetchingNextPage ? (
-              <ActivityIndicator color="#00B37E" style={styles.footerLoader} />
+              <View className="py-4">
+                <ActivityIndicator color="#00B37E" />
+              </View>
             ) : hasNextPage ? (
-              <Text style={styles.moreItemsText}>
+              <Text className="py-2 text-center text-xs text-textSecondary">
                 {meta ? `Mais tarefas disponíveis (${meta.total})` : ""}
               </Text>
             ) : null
@@ -253,7 +255,7 @@ export const TasksListScreen: React.FC = () => {
         />
       )}
 
-      <View style={styles.footer}>
+      <View className="bg-background py-4">
         <Button
           title="Nova tarefa"
           onPress={() =>
@@ -266,117 +268,5 @@ export const TasksListScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121214",
-    paddingHorizontal: 20,
-    paddingTop: 48,
-  },
-  searchContainer: {
-    position: "relative",
-    marginBottom: 8,
-  },
-  listFilters: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  filterDropdown: {
-    flex: 1,
-    minWidth: 0,
-  },
-  searchInput: {
-    backgroundColor: "#202024",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#29292E",
-    height: 52,
-    color: "#FFFFFF",
-    paddingLeft: 16,
-    paddingRight: 48,
-    fontSize: 15,
-  },
-  searchIcon: {
-    position: "absolute",
-    right: 16,
-    top: 16,
-  },
-  statusFilters: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  statusFilter: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#202024",
-    borderWidth: 1,
-    borderColor: "#29292E",
-  },
-  statusFilterActive: {
-    backgroundColor: "#00B37E",
-    borderColor: "#00B37E",
-  },
-  statusFilterText: {
-    color: "#C4C4CC",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statusFilterTextActive: {
-    color: "#FFFFFF",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  errorText: {
-    color: "#F87171",
-    textAlign: "center",
-    fontSize: 14,
-  },
-  teamErrorContainer: {
-    marginBottom: 12,
-  },
-  teamErrorText: {
-    color: "#F87171",
-    fontSize: 12,
-  },
-  retryText: {
-    color: "#00B37E",
-    fontWeight: "600",
-    marginTop: 12,
-  },
-  listContent: {
-    paddingBottom: 12,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  emptyText: {
-    color: "#8D8D99",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  footerLoader: {
-    paddingVertical: 16,
-  },
-  moreItemsText: {
-    color: "#8D8D99",
-    fontSize: 12,
-    textAlign: "center",
-    paddingVertical: 8,
-  },
-  footer: {
-    paddingVertical: 16,
-    backgroundColor: "#121214",
-  },
-});
 
 export * from "./schema";

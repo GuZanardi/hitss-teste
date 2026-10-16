@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -94,13 +93,13 @@ export const CreateTaskScreen: React.FC = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
-      style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="flex-grow justify-between px-5 pb-6 pt-12">
         <Header
           onBack={() => navigation.goBack()}
           renderIcon={() => <CheckSquare color="#00B37E" size={44} />}
@@ -108,7 +107,7 @@ export const CreateTaskScreen: React.FC = () => {
           subtitle="crie uma tarefa para organizar o trabalho"
         />
 
-        <View style={styles.form}>
+        <View className="mt-2">
           <Controller
             control={control}
             name="title"
@@ -143,9 +142,9 @@ export const CreateTaskScreen: React.FC = () => {
           />
 
           {teamsLoading ? (
-            <ActivityIndicator color="#00B37E" style={styles.teamLoader} />
+            <ActivityIndicator color="#00B37E" className="mb-5" />
           ) : teamsError ? (
-            <Text style={styles.loadError}>
+            <Text className="mb-4 text-[13px] text-red-400">
               {getErrorMessage(
                 teamsError,
                 "Não foi possível carregar os times.",
@@ -181,45 +180,17 @@ export const CreateTaskScreen: React.FC = () => {
           />
         </View>
 
-        <View style={styles.footer}>
+        <View className="mt-5 pb-2">
           <Button
             title="Criar tarefa"
             loading={createMutation.isPending}
             onPress={handleSubmit(onSubmit)}
           />
         </View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121214",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 24,
-    flexGrow: 1,
-    justifyContent: "space-between",
-  },
-  form: {
-    marginTop: 8,
-  },
-  teamLoader: {
-    marginBottom: 20,
-  },
-  loadError: {
-    color: "#F87171",
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  footer: {
-    marginTop: 20,
-    paddingBottom: 8,
-  },
-});
 
 export * from "./schema";

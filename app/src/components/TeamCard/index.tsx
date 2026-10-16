@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
 import { Users, ChevronRight, X } from "lucide-react-native";
 import { TeamCardProps } from "./types";
+import { teamColorClass } from "../../utils/teamColorClass";
 
 export const TeamCard: React.FC<TeamCardProps> = ({
   team,
@@ -18,18 +19,18 @@ export const TeamCard: React.FC<TeamCardProps> = ({
         onPress={onPress}
         onLongPress={() => setActionsVisible(true)}
         delayLongPress={500}
-        style={styles.card}
+        className="mb-3 flex-row items-center justify-between rounded-lg border border-border bg-surface px-4 py-[18px]"
       >
-        <View style={styles.leftContent}>
-          <View style={styles.iconContainer}>
+        <View className="mr-3 flex-1 flex-row items-center">
+          <View className="mr-4">
             <Users color={team.colorHex || "#00B37E"} size={24} />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.name} numberOfLines={1}>
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-white" numberOfLines={1}>
               {team.name}
             </Text>
             {team.description ? (
-              <Text style={styles.description} numberOfLines={1}>
+              <Text className="mt-0.5 text-xs text-textSecondary" numberOfLines={1}>
                 {team.description}
               </Text>
             ) : null}
@@ -45,10 +46,10 @@ export const TeamCard: React.FC<TeamCardProps> = ({
         animationType="fade"
         onRequestClose={() => setActionsVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{team.name}</Text>
+        <View className="flex-1 items-center justify-center bg-black/75 p-6">
+          <View className="w-full max-w-[340px] rounded-xl border border-[#2E2E38] bg-surface p-5">
+            <View className="mb-[18px] flex-row items-center justify-between">
+              <Text className="mr-3 flex-1 text-base font-semibold text-white">{team.name}</Text>
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="Fechar opções do time"
@@ -64,9 +65,9 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                   setActionsVisible(false);
                   onEdit();
                 }}
-                style={[styles.actionButton, styles.editButton]}
+                className="mb-2.5 h-12 items-center justify-center rounded-lg bg-brand"
               >
-                <Text style={styles.actionText}>Editar</Text>
+                <Text className="text-[15px] font-semibold text-white">Editar</Text>
               </TouchableOpacity>
             ) : null}
             {onDelete ? (
@@ -76,17 +77,17 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                   setActionsVisible(false);
                   onDelete();
                 }}
-                style={[styles.actionButton, styles.deleteButton]}
+                className="mb-2.5 h-12 items-center justify-center rounded-lg bg-red-600"
               >
-                <Text style={styles.actionText}>Excluir</Text>
+                <Text className="text-[15px] font-semibold text-white">Excluir</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => setActionsVisible(false)}
-              style={styles.cancelButton}
+              className="items-center py-2.5"
             >
-              <Text style={styles.cancelText}>Cancelar</Text>
+              <Text className="text-sm text-[#C4C4CC]">Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -94,97 +95,5 @@ export const TeamCard: React.FC<TeamCardProps> = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#202024",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#29292E",
-  },
-  leftContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
-  },
-  iconContainer: {
-    marginRight: 16,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  name: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  description: {
-    color: "#8D8D99",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: "#202024",
-    borderRadius: 12,
-    width: "100%",
-    maxWidth: 340,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#2E2E38",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  modalTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    flex: 1,
-    marginRight: 12,
-  },
-  actionButton: {
-    height: 48,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  editButton: {
-    backgroundColor: "#00B37E",
-  },
-  deleteButton: {
-    backgroundColor: "#DC2626",
-  },
-  actionText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  cancelText: {
-    color: "#C4C4CC",
-    fontSize: 14,
-  },
-});
 
 export * from "./types";

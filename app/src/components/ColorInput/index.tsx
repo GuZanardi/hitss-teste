@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  StyleSheet,
   ScrollView,
 } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { ColorInputProps } from './types';
+import { teamColorClass } from '../../utils/teamColorClass';
 
 const PRESET_COLORS = [
   '#00B37E',
@@ -38,22 +38,24 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   const selectedColor = value || '#00B37E';
 
   return (
-    <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View className="mb-4 w-full">
+      {label ? <Text className="mb-2 text-sm font-medium text-[#E1E1E6]">{label}</Text> : null}
 
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
-        style={[styles.inputContainer, error ? styles.inputError : null]}
+        className={`h-[52px] flex-row items-center justify-between rounded-lg border bg-background px-4 ${
+          error ? 'border-red-500' : 'border-border'
+        }`}
       >
-        <Text style={styles.inputText}>
+        <Text className="text-base font-medium text-white">
           {value ? value.toUpperCase() : 'Selecione uma cor'}
         </Text>
 
-        <View style={[styles.colorIndicator, { backgroundColor: selectedColor }]} />
+        <View className={`h-5 w-5 rounded-full border-[1.5px] border-[#323238] ${teamColorClass(selectedColor)}`} />
       </TouchableOpacity>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
 
       <Modal
         visible={modalVisible}
@@ -61,16 +63,17 @@ export const ColorInput: React.FC<ColorInputProps> = ({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Escolha a cor do time</Text>
+        <View className="flex-1 items-center justify-center bg-black/75 p-6">
+          <View className="w-full max-w-[340px] rounded-xl border border-[#2E2E38] bg-surface p-5">
+            <View className="mb-[18px] flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-white">Escolha a cor do time</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X color="#8D8D99" size={22} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.colorGrid}>
+            <ScrollView>
+              <View className="flex-row flex-wrap justify-between gap-3">
               {PRESET_COLORS.map((color) => {
                 const isSelected = selectedColor.toUpperCase() === color.toUpperCase();
                 return (
@@ -83,16 +86,15 @@ export const ColorInput: React.FC<ColorInputProps> = ({
                       onChangeColor(color);
                       setModalVisible(false);
                     }}
-                    style={[
-                      styles.colorCircle,
-                      { backgroundColor: color },
-                      isSelected ? styles.selectedColorCircle : null,
-                    ]}
+                    className={`my-1 h-12 w-12 items-center justify-center rounded-full ${teamColorClass(color)} ${
+                      isSelected ? 'border-2 border-white' : ''
+                    }`}
                   >
                     {isSelected ? <Check color="#FFFFFF" size={18} /> : null}
                   </TouchableOpacity>
                 );
               })}
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -100,94 +102,5 @@ export const ColorInput: React.FC<ColorInputProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  label: {
-    color: '#E1E1E6',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    backgroundColor: '#121214',
-    borderWidth: 1,
-    borderColor: '#29292E',
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  inputText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  colorIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#323238',
-  },
-  inputError: {
-    borderColor: '#EF4444',
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#202024',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 340,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2E2E38',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  colorCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 4,
-  },
-  selectedColorCircle: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-});
 
 export * from './types';

@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -40,6 +39,24 @@ export const EditTeamScreen: React.FC = () => {
     defaultValues: { name: "", colorHex: "#00B37E", description: "" },
   });
 
+  const onSubmit = handleSubmit((payload) =>
+    updateMutation.mutate(
+      {
+        name: payload.name.trim(),
+        colorHex: payload.colorHex,
+        description: payload.description?.trim() || undefined,
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error: unknown) =>
+          Alert.alert(
+            "Erro ao salvar time",
+            getErrorMessage(error, "Não foi possível atualizar o time."),
+          ),
+      },
+    ),
+  );
+
   useEffect(() => {
     if (team) {
       reset({
@@ -52,15 +69,15 @@ export const EditTeamScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.centerContainer}>
+      <View className="flex-1 items-center justify-center bg-background p-6">
         <ActivityIndicator color="#00B37E" size="large" />
       </View>
     );
   }
   if (error || !team) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadError}>
+      <View className="flex-1 items-center justify-center bg-background p-6">
+        <Text className="mb-4 text-center text-sm text-red-400">
           {getErrorMessage(error, "Não foi possível carregar o time.")}
         </Text>
         <Button
@@ -75,20 +92,21 @@ export const EditTeamScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
+      className="flex-1 bg-background"
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="flex-grow justify-between px-5 pb-6 pt-12">
         <Header
           onBack={() => navigation.goBack()}
           renderIcon={() => <Users color="#00B37E" size={48} />}
           title="Editar Time"
           subtitle="atualize os dados do seu time"
         />
-        <View style={styles.form}>
+        <View className="mt-2">
           <Controller
             control={control}
             name="name"
@@ -132,61 +150,17 @@ export const EditTeamScreen: React.FC = () => {
             )}
           />
         </View>
-        <View style={styles.footer}>
+        <View className="mt-6 pb-2">
           <Button
             title="Salvar"
             loading={updateMutation.isPending}
-            onPress={handleSubmit((payload) =>
-              updateMutation.mutate(
-                {
-                  name: payload.name.trim(),
-                  colorHex: payload.colorHex,
-                  description: payload.description?.trim() || undefined,
-                },
-                {
-                  onSuccess: () => navigation.goBack(),
-                  onError: (error: unknown) =>
-                    Alert.alert(
-                      "Erro ao salvar time",
-                      getErrorMessage(
-                        error,
-                        "Não foi possível atualizar o time.",
-                      ),
-                    ),
-                },
-              ),
-            )}
+            onPress={onSubmit}
           />
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#121214" },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 24,
-    flexGrow: 1,
-    justifyContent: "space-between",
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: "#121214",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  form: { marginTop: 8 },
-  footer: { marginTop: 24, paddingBottom: 8 },
-  loadError: {
-    color: "#F87171",
-    textAlign: "center",
-    fontSize: 14,
-    marginBottom: 16,
-  },
-});
 
 export * from "./schema";

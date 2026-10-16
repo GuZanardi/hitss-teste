@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -87,6 +86,27 @@ export const EditTaskScreen: React.FC = () => {
     color: team.colorHex,
   }));
 
+  const onSubmit = handleSubmit((formData) =>
+    updateMutation.mutate(
+      {
+        id: taskId,
+        data: {
+          ...formData,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+        },
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error: unknown) =>
+          Alert.alert(
+            "Erro ao salvar tarefa",
+            getErrorMessage(error, "Não foi possível atualizar a tarefa."),
+          ),
+      },
+    ),
+  );
+
   const confirmDelete = () => {
     Alert.alert("Excluir tarefa", "Deseja realmente excluir esta tarefa?", [
       { text: "Cancelar", style: "cancel" },
@@ -108,7 +128,7 @@ export const EditTaskScreen: React.FC = () => {
 
   if (taskLoading) {
     return (
-      <View style={styles.centerContainer}>
+      <View className="flex-1 items-center justify-center bg-background p-6">
         <ActivityIndicator color="#00B37E" size="large" />
       </View>
     );
@@ -116,8 +136,8 @@ export const EditTaskScreen: React.FC = () => {
 
   if (taskError || !task) {
     return (
-      <View className="flex-1 bg-background" style={styles.centerContainer}>
-        <Text style={styles.loadError}>
+      <View className="flex-1 items-center justify-center bg-background p-6">
+        <Text className="mb-4 text-center text-sm text-red-400">
           {getErrorMessage(taskError, "Não foi possível carregar a tarefa.")}
         </Text>
         <Button
@@ -133,13 +153,13 @@ export const EditTaskScreen: React.FC = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
-      style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="flex-grow justify-between px-5 pb-6 pt-12">
         <Header
           onBack={() => navigation.goBack()}
           onDelete={confirmDelete}
@@ -148,7 +168,7 @@ export const EditTaskScreen: React.FC = () => {
           subtitle="atualize os dados e o status da tarefa"
         />
 
-        <View style={styles.form}>
+        <View className="mt-2">
           <Controller
             control={control}
             name="title"
@@ -183,9 +203,9 @@ export const EditTaskScreen: React.FC = () => {
           />
 
           {teamsLoading ? (
-            <ActivityIndicator color="#00B37E" style={styles.teamLoader} />
+            <ActivityIndicator color="#00B37E" className="mb-5" />
           ) : teamsError ? (
-            <Text style={styles.loadError}>
+            <Text className="mb-4 text-center text-sm text-red-400">
               {getErrorMessage(
                 teamsError,
                 "Não foi possível carregar os times.",
@@ -221,75 +241,17 @@ export const EditTaskScreen: React.FC = () => {
           />
         </View>
 
-        <View style={styles.footer}>
+        <View className="mt-5 pb-2">
           <Button
             title="Salvar"
             loading={updateMutation.isPending}
-            onPress={handleSubmit((formData) =>
-              updateMutation.mutate(
-                {
-                  id: taskId,
-                  data: {
-                    ...formData,
-                    title: formData.title.trim(),
-                    description: formData.description.trim(),
-                  },
-                },
-                {
-                  onSuccess: () => navigation.goBack(),
-                  onError: (error: unknown) =>
-                    Alert.alert(
-                      "Erro ao salvar tarefa",
-                      getErrorMessage(
-                        error,
-                        "Não foi possível atualizar a tarefa.",
-                      ),
-                    ),
-                },
-              ),
-            )}
+            onPress={onSubmit}
           />
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121214",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 24,
-    flexGrow: 1,
-    justifyContent: "space-between",
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: "#121214",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  form: {
-    marginTop: 8,
-  },
-  teamLoader: {
-    marginBottom: 20,
-  },
-  loadError: {
-    color: "#F87171",
-    textAlign: "center",
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  footer: {
-    marginTop: 20,
-    paddingBottom: 8,
-  },
-});
 
 export * from "./schema";
