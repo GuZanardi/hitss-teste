@@ -46,6 +46,7 @@ export const TasksListScreen: React.FC = () => {
 
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [teamId, setTeamId] = useState(route.params?.initialTeamId ?? "");
   const [status, setStatus] = useState<TaskStatus | undefined>();
   const [sort, setSort] = useState("createdAt:desc");
@@ -67,7 +68,6 @@ export const TasksListScreen: React.FC = () => {
   const {
     data: tasksResponse,
     isLoading,
-    isFetching,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -92,6 +92,11 @@ export const TasksListScreen: React.FC = () => {
       color: team.colorHex,
     })),
   ];
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    void refetch().finally(() => setIsRefreshing(false));
+  };
 
   const handleQuickToggleStatus = (taskId: string, nextStatus: TaskStatus) => {
     statusMutation.mutate(
@@ -211,8 +216,8 @@ export const TasksListScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           refreshControl={
             <RefreshControl
-              refreshing={isFetching && !isLoading && !isFetchingNextPage}
-              onRefresh={() => void refetch()}
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
               tintColor="#00B37E"
             />
           }
