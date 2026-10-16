@@ -31,7 +31,7 @@ O schema e as migrations estão em `api/prisma/`. Os dados iniciais estão em `a
 
 ### Banco e API
 
-Na primeira execução, crie `api/.env` a partir de `api/.env.example` e ajuste as credenciais se necessário:
+Na primeira execução, crie `api/.env` a partir de `api/.env.example` e configure os valores para o seu ambiente local. Os valores do arquivo de exemplo são apenas para desenvolvimento; não os reutilize em produção:
 
 ```bash
 cp api/.env.example api/.env

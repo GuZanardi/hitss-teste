@@ -1,8 +1,13 @@
 import { api } from './api';
-import { ApiResponse, Team } from '../types';
+import type { ApiResponse, Team } from '../types';
+import type {
+  CreateTeamData,
+  TeamsQueryParams,
+  UpdateTeamData,
+} from '../types/teams.types';
 
 export const teamsService = {
-  async getTeams(params?: { search?: string; limit?: number; offset?: number }): Promise<ApiResponse<Team[]>> {
+  async getTeams(params?: TeamsQueryParams): Promise<ApiResponse<Team[]>> {
     const response = await api.get<ApiResponse<Team[]>>('/teams', { params });
     return response.data;
   },
@@ -12,12 +17,12 @@ export const teamsService = {
     return response.data;
   },
 
-  async createTeam(data: { name: string; colorHex: string; description?: string }): Promise<ApiResponse<Team>> {
+  async createTeam(data: CreateTeamData): Promise<ApiResponse<Team>> {
     const response = await api.post<ApiResponse<Team>>('/teams', data);
     return response.data;
   },
 
-  async updateTeam(id: string, data: { name?: string; colorHex?: string; description?: string }): Promise<ApiResponse<Team>> {
+  async updateTeam(id: string, data: UpdateTeamData): Promise<ApiResponse<Team>> {
     const response = await api.put<ApiResponse<Team>>(`/teams/${id}`, data);
     return response.data;
   },
@@ -26,4 +31,3 @@ export const teamsService = {
     await api.delete(`/teams/${id}`);
   },
 };
-

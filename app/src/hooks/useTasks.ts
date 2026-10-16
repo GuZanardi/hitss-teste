@@ -1,23 +1,23 @@
 import {
-  InfiniteData,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { tasksService } from '../services/tasks.service';
-import { Task, TaskStatus, ApiResponse } from '../types';
+import type { TasksQueryParams } from '../types/tasks.types';
+import type {
+  InfiniteTasksData,
+  UpdateTaskVariables,
+} from '../types/tasks.types';
+import type { ApiResponse, Task, TaskStatus, Team } from '../types';
+import { TEAMS_QUERY_KEY } from './useTeams';
 
 export const TASKS_QUERY_KEY = ['tasks'];
+export const TASK_QUERY_KEY = ['task'];
+export const TASKS_INFINITE_QUERY_KEY = [...TASKS_QUERY_KEY, 'infinite'];
 
-export function useTasks(params?: {
-  teamId?: string;
-  status?: TaskStatus;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  sort?: string;
-}) {
+export function useTasks(params?: TasksQueryParams) {
   return useInfiniteQuery({
     queryKey: [...TASKS_QUERY_KEY, 'infinite', { ...params, offset: undefined }],
     initialPageParam: params?.offset ?? 0,
@@ -32,7 +32,7 @@ export function useTasks(params?: {
 
 export function useTask(id?: string) {
   return useQuery({
-    queryKey: ['task', id],
+    queryKey: [...TASK_QUERY_KEY, id],
     queryFn: () => tasksService.getTaskById(id!),
     enabled: !!id,
   });
@@ -43,9 +43,7 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: tasksService.createTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }),
   });
 }
 
@@ -55,62 +53,57 @@ export function useUpdateTaskStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       tasksService.updateTaskStatus(id, status),
-    // Optimistic update na alteração de status
     onMutate: async ({ id, status }) => {
+      const taskQueryKey = [...TASK_QUERY_KEY, id];
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      await queryClient.cancelQueries({ queryKey: ['task', id] });
+      await queryClient.cancelQueries({ queryKey: taskQueryKey });
 
-      const previousTasksData = queryClient.getQueriesData<
-        InfiniteData<ApiResponse<Task[]>>
-      >({
-        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
+      const previousTasks = queryClient.getQueriesData<InfiniteTasksData>({
+        queryKey: TASKS_INFINITE_QUERY_KEY,
       });
-      const previousSingleTask = queryClient.getQueryData<ApiResponse<Task>>([
-        'task',
-        id,
-      ]);
+      const previousTask =
+        queryClient.getQueryData<ApiResponse<Task>>(taskQueryKey);
 
-      // Atualiza de forma otimista nas listagens
-      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
-        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.map((task) =>
-                task.id === id ? { ...task, status } : task,
-              ),
-            })),
-          };
-        },
+      queryClient.setQueriesData<InfiniteTasksData>(
+        { queryKey: TASKS_INFINITE_QUERY_KEY },
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((task) =>
+                    task.id === id ? { ...task, status } : task,
+                  ),
+                })),
+              }
+            : old,
       );
 
-      // Atualiza no cache individual
-      if (previousSingleTask) {
-        queryClient.setQueryData<ApiResponse<Task>>(['task', id], {
-          ...previousSingleTask,
-          data: { ...previousSingleTask.data, status },
+      if (previousTask) {
+        queryClient.setQueryData<ApiResponse<Task>>(taskQueryKey, {
+          ...previousTask,
+          data: { ...previousTask.data, status },
         });
       }
 
-      return { previousTasksData, previousSingleTask };
+      return { previousTasks, previousTask };
     },
-    onError: (_err, { id }, context) => {
-      // Rollback
-      if (context?.previousTasksData) {
-        context.previousTasksData.forEach(([key, data]) => {
-          queryClient.setQueryData(key, data);
+    onError: (_error, { id }, context) => {
+      if (context?.previousTasks) {
+        context.previousTasks.forEach(([key, previous]) => {
+          queryClient.setQueryData(key, previous);
         });
       }
-      if (context?.previousSingleTask) {
-        queryClient.setQueryData(['task', id], context.previousSingleTask);
+      if (context?.previousTask) {
+        queryClient.setQueryData([...TASK_QUERY_KEY, id], context.previousTask);
       }
     },
     onSettled: (_data, _error, { id }) => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['task', id] });
+      void queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        queryKey: [...TASK_QUERY_KEY, id],
+      });
     },
   });
 }
@@ -119,56 +112,77 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: {
-        title?: string;
-        description: string;
-        status?: TaskStatus;
-        dueDate?: string;
-        teamIds?: string[];
-      };
-    }) => tasksService.updateTask(id, data),
-    // Optimistic update na edição quando o status é modificado
+    mutationFn: ({ id, data }: UpdateTaskVariables) =>
+      tasksService.updateTask(id, data),
     onMutate: async ({ id, data }) => {
+      const taskQueryKey = [...TASK_QUERY_KEY, id];
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      const previousTasksData = queryClient.getQueriesData<
-        InfiniteData<ApiResponse<Task[]>>
-      >({
-        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
+      await queryClient.cancelQueries({ queryKey: taskQueryKey });
+
+      const previousTask =
+        queryClient.getQueryData<ApiResponse<Task>>(taskQueryKey);
+      const previousTasks = queryClient.getQueriesData<InfiniteTasksData>({
+        queryKey: TASKS_INFINITE_QUERY_KEY,
       });
+      const availableTeams =
+        queryClient.getQueryData<ApiResponse<Team[]>>([
+          ...TEAMS_QUERY_KEY,
+          { limit: 100, offset: 0 },
+        ])?.data ?? [];
+      const optimisticTask = previousTask
+        ? {
+            ...previousTask.data,
+            ...data,
+            title: data.title?.trim() ?? previousTask.data.title,
+            description:
+              data.description?.trim() ?? previousTask.data.description,
+            teams: data.teamIds
+              ? availableTeams.filter((team) => data.teamIds?.includes(team.id))
+              : previousTask.data.teams,
+          }
+        : undefined;
 
-      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
-        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.map((task) =>
-                task.id === id ? { ...task, ...data } : task,
-              ),
-            })),
-          };
-        },
-      );
-
-      return { previousTasksData };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTasksData) {
-        context.previousTasksData.forEach(([key, data]) => {
-          queryClient.setQueryData(key, data);
+      if (previousTask && optimisticTask) {
+        queryClient.setQueryData<ApiResponse<Task>>(taskQueryKey, {
+          ...previousTask,
+          data: optimisticTask,
         });
       }
+
+      queryClient.setQueriesData<InfiniteTasksData>(
+        { queryKey: TASKS_INFINITE_QUERY_KEY },
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((task) =>
+                    task.id === id && optimisticTask ? optimisticTask : task,
+                  ),
+                })),
+              }
+            : old,
+      );
+
+      return { previousTask, previousTasks };
     },
-    onSettled: (_data, _err, { id }) => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['task', id] });
+    onError: (_error, { id }, context) => {
+      if (context?.previousTask) {
+        queryClient.setQueryData([...TASK_QUERY_KEY, id], context.previousTask);
+      }
+      context?.previousTasks.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
+    },
+    onSuccess: (response, { id }) => {
+      queryClient.setQueryData([...TASK_QUERY_KEY, id], response);
+    },
+    onSettled: (_data, _error, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        queryKey: [...TASK_QUERY_KEY, id],
+      });
     },
   });
 }
@@ -177,44 +191,39 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => tasksService.deleteTask(id),
-    // Optimistic update na exclusão de tarefas
-    onMutate: async (deletedId: string) => {
+    mutationFn: tasksService.deleteTask,
+    onMutate: async (deletedId) => {
       await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      const previousTasksData = queryClient.getQueriesData<
-        InfiniteData<ApiResponse<Task[]>>
-      >({
-        queryKey: [...TASKS_QUERY_KEY, 'infinite'],
+      const previousTasks = queryClient.getQueriesData<InfiniteTasksData>({
+        queryKey: TASKS_INFINITE_QUERY_KEY,
       });
 
-      queryClient.setQueriesData<InfiniteData<ApiResponse<Task[]>>>(
-        { queryKey: [...TASKS_QUERY_KEY, 'infinite'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.filter((task) => task.id !== deletedId),
-              meta: page.meta
-                ? { ...page.meta, total: Math.max(0, page.meta.total - 1) }
-                : undefined,
-            })),
-          };
-        },
+      queryClient.setQueriesData<InfiniteTasksData>(
+        { queryKey: TASKS_INFINITE_QUERY_KEY },
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  data: page.data.filter((task) => task.id !== deletedId),
+                  meta: page.meta
+                    ? { ...page.meta, total: Math.max(0, page.meta.total - 1) }
+                    : undefined,
+                })),
+              }
+            : old,
       );
 
-      return { previousTasksData };
+      return { previousTasks };
     },
-    onError: (_err, _deletedId, context) => {
-      if (context?.previousTasksData) {
-        context.previousTasksData.forEach(([key, data]) => {
-          queryClient.setQueryData(key, data);
-        });
-      }
+    onError: (_error, _deletedId, context) => {
+      context?.previousTasks.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
     },
   });
 }

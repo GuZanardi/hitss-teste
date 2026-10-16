@@ -1,5 +1,5 @@
-import { createTaskSchema } from '../CreateTask/types';
-import { editTaskSchema } from '../EditTask/types';
+import { createTaskSchema } from '../CreateTask/schema';
+import { editTaskSchema } from '../EditTask/schema';
 
 const baseTask = {
   title: 'Uma tarefa',

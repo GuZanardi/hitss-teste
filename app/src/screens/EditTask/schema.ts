@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import { TaskStatus, Team } from '../../types';
 
 export const editTaskSchema = z.object({
   title: z.string().min(3, 'O título deve ter no mínimo 3 caracteres.'),
@@ -9,14 +8,3 @@ export const editTaskSchema = z.object({
 });
 
 export type EditTaskFormData = z.infer<typeof editTaskSchema>;
-
-export interface UpdateTaskPayload {
-  title: string;
-  description: string;
-  status: TaskStatus;
-  teamIds: string[];
-}
-
-export interface EditTaskTeamsResponse {
-  data: Team[];
-}

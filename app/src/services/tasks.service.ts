@@ -1,15 +1,13 @@
 import { api } from './api';
-import { ApiResponse, Task, TaskStatus } from '../types';
+import type { ApiResponse, Task, TaskStatus } from '../types';
+import type {
+  CreateTaskData,
+  TasksQueryParams,
+  UpdateTaskData,
+} from '../types/tasks.types';
 
 export const tasksService = {
-  async getTasks(params?: {
-    teamId?: string;
-    status?: TaskStatus;
-    search?: string;
-    limit?: number;
-    offset?: number;
-    sort?: string;
-  }): Promise<ApiResponse<Task[]>> {
+  async getTasks(params?: TasksQueryParams): Promise<ApiResponse<Task[]>> {
     const response = await api.get<ApiResponse<Task[]>>('/tasks', { params });
     return response.data;
   },
@@ -19,26 +17,14 @@ export const tasksService = {
     return response.data;
   },
 
-  async createTask(data: {
-    title: string;
-    description: string;
-    status?: TaskStatus;
-    dueDate?: string;
-    teamIds?: string[];
-  }): Promise<ApiResponse<Task>> {
+  async createTask(data: CreateTaskData): Promise<ApiResponse<Task>> {
     const response = await api.post<ApiResponse<Task>>('/tasks', data);
     return response.data;
   },
 
   async updateTask(
     id: string,
-    data: {
-      title?: string;
-      description: string;
-      status?: TaskStatus;
-      dueDate?: string;
-      teamIds?: string[];
-    },
+    data: UpdateTaskData,
   ): Promise<ApiResponse<Task>> {
     const response = await api.put<ApiResponse<Task>>(`/tasks/${id}`, data);
     return response.data;

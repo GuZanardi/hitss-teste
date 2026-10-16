@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   StyleSheet,
@@ -6,38 +6,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users } from 'lucide-react-native';
-import { Header, Input, ColorInput, Button } from '../../components';
-import { createTeamService } from './service';
-import { createTeamSchema, CreateTeamFormData } from './types';
-import { getErrorMessage } from '../../utils/errors';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
+
+import { useCreateTeam } from "../../hooks/useTeams";
+import { getErrorMessage } from "../../utils/errors";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createTeamSchema, CreateTeamFormData } from "./schema";
+
+import { Users } from "lucide-react-native";
+import { Header, Input, ColorInput, Button } from "../../components";
 
 export const CreateTeamScreen: React.FC = () => {
-  const navigation = useNavigation<
-    NativeStackNavigationProp<RootStackParamList, 'CreateTeam'>
-  >();
-  const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: createTeamService.createTeam,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      navigation.goBack();
-    },
-    onError: (error: unknown) => {
-      Alert.alert(
-        'Erro ao criar time',
-        getErrorMessage(error, 'Não foi possível criar o time. Verifique os dados.'),
-      );
-    },
-  });
+  const navigation =
+    useNavigation<
+      NativeStackNavigationProp<RootStackParamList, "CreateTeam">
+    >();
+  const createMutation = useCreateTeam();
 
   const {
     control,
@@ -46,23 +34,36 @@ export const CreateTeamScreen: React.FC = () => {
   } = useForm<CreateTeamFormData>({
     resolver: zodResolver(createTeamSchema),
     defaultValues: {
-      name: '',
-      colorHex: '#00B37E',
-      description: '',
+      name: "",
+      colorHex: "#00B37E",
+      description: "",
     },
   });
 
   const onSubmit = (data: CreateTeamFormData) => {
-    createMutation.mutate({
-      name: data.name,
-      colorHex: data.colorHex,
-      description: data.description || undefined,
-    });
+    createMutation.mutate(
+      {
+        name: data.name,
+        colorHex: data.colorHex,
+        description: data.description || undefined,
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error: unknown) =>
+          Alert.alert(
+            "Erro ao criar time",
+            getErrorMessage(
+              error,
+              "Não foi possível criar o time. Verifique os dados.",
+            ),
+          ),
+      },
+    );
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
       style={styles.container}
     >
@@ -140,14 +141,14 @@ export const CreateTeamScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121214',
+    backgroundColor: "#121214",
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 48,
     paddingBottom: 24,
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   form: {
     marginTop: 8,
@@ -158,5 +159,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export * from './types';
-export * from './service';
+export * from "./schema";

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -8,54 +8,51 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+} from "react-native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { DropdownItem } from "../../components/Dropdown/types";
+import { RootStackParamList, TaskStatus } from "../../types";
+
+import { useTeams } from "../../hooks/useTeams";
+import { getErrorMessage } from "../../utils/errors";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { EditTaskFormData, editTaskSchema } from "./schema";
+import { useDeleteTask, useTask, useUpdateTask } from "../../hooks/useTasks";
+
+import { CheckSquare } from "lucide-react-native";
 import {
-  InfiniteData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { CheckSquare } from 'lucide-react-native';
-import { Button, Dropdown, Header, Input, MultiDropdown } from '../../components';
-import { DropdownItem } from '../../components/Dropdown/types';
-import { ApiResponse, RootStackParamList, Task, TaskStatus } from '../../types';
-import { TasksListResponse } from '../TasksList/types';
-import { getErrorMessage } from '../../utils/errors';
-import { editTaskService } from './service';
-import { EditTaskFormData, editTaskSchema } from './types';
+  Button,
+  Dropdown,
+  Header,
+  Input,
+  MultiDropdown,
+} from "../../components";
 
 const STATUS_ITEMS: Array<{ label: string; value: TaskStatus }> = [
-  { label: 'Pendente', value: 'PENDING' },
-  { label: 'Em progresso', value: 'IN_PROGRESS' },
-  { label: 'Concluída', value: 'COMPLETED' },
+  { label: "Pendente", value: "PENDING" },
+  { label: "Em progresso", value: "IN_PROGRESS" },
+  { label: "Concluída", value: "COMPLETED" },
 ];
 
 export const EditTaskScreen: React.FC = () => {
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'EditTask'>>();
-  const route = useRoute<RouteProp<RootStackParamList, 'EditTask'>>();
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "EditTask">>();
+  const route = useRoute<RouteProp<RootStackParamList, "EditTask">>();
   const { taskId } = route.params;
-  const queryClient = useQueryClient();
   const {
     data: taskResponse,
     isLoading: taskLoading,
     error: taskError,
-  } = useQuery({
-    queryKey: ['task', taskId],
-    queryFn: () => editTaskService.getTask(taskId),
-  });
+  } = useTask(taskId);
   const {
     data: teamsResponse,
     isLoading: teamsLoading,
     error: teamsError,
-  } = useQuery({
-    queryKey: ['teams', { limit: 100, offset: 0 }],
-    queryFn: () => editTaskService.getTeams({ limit: 100, offset: 0 }),
-  });
+  } = useTeams({ limit: 100, offset: 0 });
+  const updateMutation = useUpdateTask();
+  const deleteMutation = useDeleteTask();
 
   const task = taskResponse?.data;
   const {
@@ -66,9 +63,9 @@ export const EditTaskScreen: React.FC = () => {
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      status: 'PENDING',
+      title: "",
+      description: "",
+      status: "PENDING",
       teamIds: [],
     },
   });
@@ -77,136 +74,12 @@ export const EditTaskScreen: React.FC = () => {
     if (task) {
       reset({
         title: task.title,
-        description: task.description ?? '',
+        description: task.description ?? "",
         status: task.status,
         teamIds: task.teams.map((team) => team.id),
       });
     }
   }, [reset, task]);
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: EditTaskFormData }) =>
-      editTaskService.updateTask(id, {
-        ...payload,
-        title: payload.title.trim(),
-        description: payload.description.trim(),
-      }),
-    onMutate: async ({ id, payload }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      await queryClient.cancelQueries({ queryKey: ['task', id] });
-
-      const previousTask =
-        queryClient.getQueryData<ApiResponse<Task>>(['task', id]);
-      const previousTasks = queryClient.getQueriesData<
-        InfiniteData<TasksListResponse>
-      >({
-        queryKey: ['tasks', 'infinite'],
-      });
-      const availableTeams = queryClient.getQueryData<ApiResponse<
-        Array<{ id: string; name: string; colorHex: string }>
-      >>(['teams', { limit: 100, offset: 0 }])?.data ?? [];
-      const optimisticTask = previousTask
-        ? {
-            ...previousTask.data,
-            title: payload.title.trim(),
-            description: payload.description.trim(),
-            status: payload.status,
-            teams: availableTeams.filter((team) => payload.teamIds.includes(team.id)),
-          }
-        : undefined;
-
-      if (previousTask && optimisticTask) {
-        queryClient.setQueryData<ApiResponse<Task>>(['task', id], {
-          ...previousTask,
-          data: optimisticTask,
-        });
-      }
-      queryClient.setQueriesData<InfiniteData<TasksListResponse>>(
-        { queryKey: ['tasks', 'infinite'] },
-        (previous) =>
-          previous
-            ? {
-                ...previous,
-                pages: previous.pages.map((page) => ({
-                  ...page,
-                  data: page.data.map((item) =>
-                    item.id === id && optimisticTask ? optimisticTask : item,
-                  ),
-                })),
-              }
-            : previous,
-      );
-
-      return { previousTask, previousTasks };
-    },
-    onError: (error: unknown, { id }, context) => {
-      if (context?.previousTask) {
-        queryClient.setQueryData(['task', id], context.previousTask);
-      }
-      context?.previousTasks.forEach(([key, previous]) => {
-        queryClient.setQueryData(key, previous);
-      });
-      Alert.alert(
-        'Erro ao salvar tarefa',
-        getErrorMessage(error, 'Não foi possível atualizar a tarefa.'),
-      );
-    },
-    onSuccess: (response, { id }) => {
-      queryClient.setQueryData(['task', id], response);
-      navigation.goBack();
-    },
-    onSettled: (_data, _error, { id }) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      void queryClient.invalidateQueries({ queryKey: ['task', id] });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: editTaskService.deleteTask,
-    onMutate: async (deletedId) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueriesData<
-        InfiniteData<TasksListResponse>
-      >({
-        queryKey: ['tasks', 'infinite'],
-      });
-
-      queryClient.setQueriesData<InfiniteData<TasksListResponse>>(
-        { queryKey: ['tasks', 'infinite'] },
-        (previous) =>
-          previous
-            ? {
-                ...previous,
-                pages: previous.pages.map((page) => ({
-                  ...page,
-                  data: page.data.filter((item) => item.id !== deletedId),
-                  meta: page.meta
-                    ? {
-                        ...page.meta,
-                        total: Math.max(0, page.meta.total - 1),
-                      }
-                    : undefined,
-                })),
-              }
-            : previous,
-      );
-
-      return { previousTasks };
-    },
-    onError: (error: unknown, _deletedId, context) => {
-      context?.previousTasks.forEach(([key, previous]) => {
-        queryClient.setQueryData(key, previous);
-      });
-      Alert.alert(
-        'Erro ao excluir tarefa',
-        getErrorMessage(error, 'Não foi possível excluir a tarefa.'),
-      );
-    },
-    onSuccess: () => navigation.goBack(),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
 
   const teamItems: DropdownItem[] = (teamsResponse?.data ?? []).map((team) => ({
     label: team.name,
@@ -215,12 +88,20 @@ export const EditTaskScreen: React.FC = () => {
   }));
 
   const confirmDelete = () => {
-    Alert.alert('Excluir tarefa', 'Deseja realmente excluir esta tarefa?', [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert("Excluir tarefa", "Deseja realmente excluir esta tarefa?", [
+      { text: "Cancelar", style: "cancel" },
       {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: () => deleteMutation.mutate(taskId),
+        text: "Excluir",
+        style: "destructive",
+        onPress: () =>
+          deleteMutation.mutate(taskId, {
+            onSuccess: () => navigation.goBack(),
+            onError: (error: unknown) =>
+              Alert.alert(
+                "Erro ao excluir tarefa",
+                getErrorMessage(error, "Não foi possível excluir a tarefa."),
+              ),
+          }),
       },
     ]);
   };
@@ -237,16 +118,20 @@ export const EditTaskScreen: React.FC = () => {
     return (
       <View className="flex-1 bg-background" style={styles.centerContainer}>
         <Text style={styles.loadError}>
-          {getErrorMessage(taskError, 'Não foi possível carregar a tarefa.')}
+          {getErrorMessage(taskError, "Não foi possível carregar a tarefa.")}
         </Text>
-        <Button title="Voltar" variant="secondary" onPress={() => navigation.goBack()} />
+        <Button
+          title="Voltar"
+          variant="secondary"
+          onPress={() => navigation.goBack()}
+        />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
       style={styles.container}
     >
@@ -301,7 +186,10 @@ export const EditTaskScreen: React.FC = () => {
             <ActivityIndicator color="#00B37E" style={styles.teamLoader} />
           ) : teamsError ? (
             <Text style={styles.loadError}>
-              {getErrorMessage(teamsError, 'Não foi possível carregar os times.')}
+              {getErrorMessage(
+                teamsError,
+                "Não foi possível carregar os times.",
+              )}
             </Text>
           ) : (
             <Controller
@@ -338,7 +226,27 @@ export const EditTaskScreen: React.FC = () => {
             title="Salvar"
             loading={updateMutation.isPending}
             onPress={handleSubmit((formData) =>
-              updateMutation.mutate({ id: taskId, payload: formData }),
+              updateMutation.mutate(
+                {
+                  id: taskId,
+                  data: {
+                    ...formData,
+                    title: formData.title.trim(),
+                    description: formData.description.trim(),
+                  },
+                },
+                {
+                  onSuccess: () => navigation.goBack(),
+                  onError: (error: unknown) =>
+                    Alert.alert(
+                      "Erro ao salvar tarefa",
+                      getErrorMessage(
+                        error,
+                        "Não foi possível atualizar a tarefa.",
+                      ),
+                    ),
+                },
+              ),
             )}
           />
         </View>
@@ -350,20 +258,20 @@ export const EditTaskScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121214',
+    backgroundColor: "#121214",
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 48,
     paddingBottom: 24,
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#121214',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#121214",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   form: {
@@ -373,8 +281,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loadError: {
-    color: '#F87171',
-    textAlign: 'center',
+    color: "#F87171",
+    textAlign: "center",
     fontSize: 14,
     marginBottom: 16,
   },
@@ -384,5 +292,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export * from './types';
-export * from './service';
+export * from "./schema";

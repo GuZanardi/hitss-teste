@@ -1,15 +1,20 @@
 import {
   keepPreviousData,
-  useQuery,
+  useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { teamsService } from '../services/teams.service';
-import { Team, ApiResponse } from '../types';
+import type { TeamsQueryParams, UpdateTeamData } from '../types/teams.types';
+import type { InfiniteTeamsData } from '../types/teams.types';
+import type { ApiResponse, Team } from '../types';
 
 export const TEAMS_QUERY_KEY = ['teams'];
+export const TEAMS_INFINITE_QUERY_KEY = [...TEAMS_QUERY_KEY, 'infinite'];
+export const TEAM_QUERY_KEY = ['team'];
 
-export function useTeams(params?: { search?: string; limit?: number; offset?: number }) {
+export function useTeams(params?: TeamsQueryParams) {
   return useQuery({
     queryKey: [...TEAMS_QUERY_KEY, params],
     queryFn: () => teamsService.getTeams(params),
@@ -17,9 +22,22 @@ export function useTeams(params?: { search?: string; limit?: number; offset?: nu
   });
 }
 
+export function useInfiniteTeams(params: Omit<TeamsQueryParams, 'offset'>) {
+  return useInfiniteQuery({
+    queryKey: [...TEAMS_INFINITE_QUERY_KEY, params],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      teamsService.getTeams({ ...params, offset: pageParam }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta?.hasMore
+        ? lastPage.meta.offset + lastPage.meta.limit
+        : undefined,
+  });
+}
+
 export function useTeam(id?: string) {
   return useQuery({
-    queryKey: ['team', id],
+    queryKey: [...TEAM_QUERY_KEY, id],
     queryFn: () => teamsService.getTeamById(id!),
     enabled: !!id,
   });
@@ -30,8 +48,96 @@ export function useCreateTeam() {
 
   return useMutation({
     mutationFn: teamsService.createTeam,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY }),
+  });
+}
+
+export function useUpdateTeam(id: string) {
+  const queryClient = useQueryClient();
+  const teamQueryKey = [...TEAM_QUERY_KEY, id];
+
+  return useMutation({
+    mutationFn: (data: UpdateTeamData) =>
+      teamsService.updateTeam(id, data),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: TEAMS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: teamQueryKey });
+
+      const previousTeam = queryClient.getQueryData<ApiResponse<Team>>(teamQueryKey);
+      const previousLists = queryClient.getQueriesData<InfiniteTeamsData>({
+        queryKey: TEAMS_INFINITE_QUERY_KEY,
+      });
+      const previousStandardLists = queryClient.getQueriesData<ApiResponse<Team[]>>({
+        queryKey: TEAMS_QUERY_KEY,
+        predicate: (query) => query.queryKey[1] !== 'infinite',
+      });
+
+      if (previousTeam) {
+        queryClient.setQueryData<ApiResponse<Team>>(teamQueryKey, {
+          ...previousTeam,
+          data: {
+            ...previousTeam.data,
+            ...data,
+            name: data.name?.trim() ?? previousTeam.data.name,
+          },
+        });
+      }
+
+      queryClient.setQueriesData<InfiniteTeamsData>(
+        { queryKey: TEAMS_INFINITE_QUERY_KEY },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                pages: previous.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((team) =>
+                    team.id === id
+                      ? { ...team, ...data, name: data.name?.trim() ?? team.name }
+                      : team,
+                  ),
+                })),
+              }
+            : previous,
+      );
+      queryClient.setQueriesData<ApiResponse<Team[]>>(
+        {
+          queryKey: TEAMS_QUERY_KEY,
+          predicate: (query) => query.queryKey[1] !== 'infinite',
+        },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                data: previous.data.map((team) =>
+                  team.id === id
+                    ? { ...team, ...data, name: data.name?.trim() ?? team.name }
+                    : team,
+                ),
+              }
+            : previous,
+      );
+
+      return { previousTeam, previousLists, previousStandardLists };
+    },
+    onError: (_error, _data, context) => {
+      if (context?.previousTeam) {
+        queryClient.setQueryData(teamQueryKey, context.previousTeam);
+      }
+      context?.previousLists.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
+      context?.previousStandardLists.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
+    },
+    onSuccess: (response) => {
+      queryClient.setQueryData(teamQueryKey, response);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: teamQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }
@@ -40,43 +146,73 @@ export function useDeleteTeam() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => teamsService.deleteTeam(id),
-    // Optimistic update na exclusão de times
-    onMutate: async (deletedId: string) => {
+    mutationFn: teamsService.deleteTeam,
+    onMutate: async (deletedId) => {
       await queryClient.cancelQueries({ queryKey: TEAMS_QUERY_KEY });
+      const teamQueryKey = [...TEAM_QUERY_KEY, deletedId];
+      await queryClient.cancelQueries({ queryKey: teamQueryKey });
 
-      const previousQueriesData = queryClient.getQueriesData<ApiResponse<Team[]>>({
+      const previousTeam = queryClient.getQueryData<ApiResponse<Team>>(teamQueryKey);
+      const previousLists = queryClient.getQueriesData<InfiniteTeamsData>({
+        queryKey: TEAMS_INFINITE_QUERY_KEY,
+      });
+      const previousStandardLists = queryClient.getQueriesData<ApiResponse<Team[]>>({
         queryKey: TEAMS_QUERY_KEY,
+        predicate: (query) => query.queryKey[1] !== 'infinite',
       });
 
-      // Aplica atualização otimista removendo o time imediatamente das listagens cacheadas
+      queryClient.setQueriesData<InfiniteTeamsData>(
+        { queryKey: TEAMS_INFINITE_QUERY_KEY },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                pages: previous.pages.map((page) => ({
+                  ...page,
+                  data: page.data.filter((team) => team.id !== deletedId),
+                  meta: page.meta
+                    ? { ...page.meta, total: Math.max(0, page.meta.total - 1) }
+                    : undefined,
+                })),
+              }
+            : previous,
+      );
       queryClient.setQueriesData<ApiResponse<Team[]>>(
-        { queryKey: TEAMS_QUERY_KEY },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            data: old.data.filter((team) => team.id !== deletedId),
-            meta: old.meta
-              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
-              : undefined,
-          };
+        {
+          queryKey: TEAMS_QUERY_KEY,
+          predicate: (query) => query.queryKey[1] !== 'infinite',
         },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                data: previous.data.filter((team) => team.id !== deletedId),
+                meta: previous.meta
+                  ? { ...previous.meta, total: Math.max(0, previous.meta.total - 1) }
+                  : undefined,
+              }
+            : previous,
       );
 
-      return { previousQueriesData };
+      return { previousTeam, teamQueryKey, previousLists, previousStandardLists };
     },
-    onError: (_err, _deletedId, context) => {
-      // Rollback se falhar
-      if (context?.previousQueriesData) {
-        context.previousQueriesData.forEach(([key, data]) => {
-          queryClient.setQueryData(key, data);
-        });
+    onError: (_error, _deletedId, context) => {
+      if (context?.previousTeam) {
+        queryClient.setQueryData(context.teamQueryKey, context.previousTeam);
       }
+      context?.previousLists.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
+      context?.previousStandardLists.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSettled: (_data, _error, deletedId) => {
+      queryClient.removeQueries({
+        queryKey: [...TEAM_QUERY_KEY, deletedId],
+      });
+      void queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import { Team } from '../../types';
 
 export const createTeamSchema = z.object({
   name: z
@@ -14,14 +13,3 @@ export const createTeamSchema = z.object({
 });
 
 export type CreateTeamFormData = z.infer<typeof createTeamSchema>;
-
-export interface CreateTeamPayload {
-  name: string;
-  colorHex: string;
-  description?: string;
-}
-
-export interface CreateTeamResponse {
-  data: Team;
-}
-

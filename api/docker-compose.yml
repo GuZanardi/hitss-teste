@@ -4,16 +4,16 @@ services:
     container_name: claro_mysql_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ${DB_NAME:-claro_tasks_db}
-      MYSQL_USER: ${DB_USER:-clarouser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-claropassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${DB_PORT:-3308}:3306"
+      - "${DB_PORT}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 5s
       timeout: 5s
       retries: 10
