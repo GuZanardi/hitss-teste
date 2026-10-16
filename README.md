@@ -24,7 +24,8 @@ O schema e as migrations estão em `api/prisma/`. Os dados iniciais estão em `a
 
 ### Pré-requisitos
 
-- Node.js 20 ou superior e npm.
+- Node.js 20 ou superior e npm para a API.
+- Node.js 22.11 ou superior para o app React Native 0.85.
 - Docker com Docker Compose v2.1.1 ou superior para o MySQL (`docker compose up --wait`).
 - Para Android: Android Studio, SDK e um emulador ou dispositivo.
 - Para iOS: macOS, Xcode e CocoaPods.
@@ -47,6 +48,8 @@ npm run start:dev
 A opção `--wait` aguarda o healthcheck do MySQL antes de executar as migrations. A API ficará disponível em `http://localhost:3333/api`; mantenha esse terminal aberto. O seed recria os dados de avaliação, portanto deve ser usado somente em uma base local descartável.
 
 ### App mobile
+
+Use Node.js 22.11 ou superior para instalar e executar o app.
 
 Crie `app/.env` a partir de `app/.env.example` e configure `API_URL` para o ambiente em que o app será executado. Para o emulador Android, use `http://10.0.2.2:3333/api`; para o simulador iOS, `http://localhost:3333/api`. Em um aparelho físico, use o endereço IP da máquina na rede local. Execute os comandos a seguir a partir da raiz do repositório:
 

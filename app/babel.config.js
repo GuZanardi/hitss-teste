@@ -20,6 +20,7 @@ module.exports = (api) => {
           allowUndefined: false,
         },
       ],
+      'react-native-worklets/plugin',
     ],
   };
 };

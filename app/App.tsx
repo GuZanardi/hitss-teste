@@ -1,6 +1,6 @@
 import React from 'react';
-import { StatusBar, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Platform, StatusBar, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -22,7 +22,12 @@ export default function App() {
         <NavigationContainer>
           <View className="flex-1 bg-background">
             <StatusBar barStyle="light-content" />
-            <RootNavigator />
+            <SafeAreaView
+              edges={Platform.OS === 'android' ? ['bottom'] : []}
+              style={{ flex: 1 }}
+            >
+              <RootNavigator />
+            </SafeAreaView>
           </View>
         </NavigationContainer>
       </QueryClientProvider>
